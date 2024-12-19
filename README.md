@@ -1,4 +1,6 @@
-# Aspire Project Commander
+# <img src="https://github.com/microsoft/fluentui-system-icons/blob/master/assets/Desktop Signal/SVG/ic_fluent_desktop_signal_24_filled.svg?raw=true" width="24" height="24" align="absmiddle"> Aspire Project Commander
+
+Aspire Project commander is a set of packages that lets you send simple string commands from the dashboard directly to projects.
 
 ## Custom Resource Commands
 [Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/) allows adding [custom commands](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/custom-resource-commands) to any project in the dashboard but these commands are scoped to and handled in the AppHost itself. These are useful to send commands to APIs on running containers, such as performing a `FLUSHALL` on a Redis container to reset state. Ultimately, the `WithCommand` resource extension method requires you to interface with each target resource (e.g. `Executable`, `Container`, `Project`) independently, using code you write yourself.
