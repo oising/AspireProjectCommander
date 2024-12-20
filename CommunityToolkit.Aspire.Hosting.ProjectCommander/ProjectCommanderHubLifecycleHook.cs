@@ -15,7 +15,7 @@ internal sealed class ProjectCommanderHubLifecycleHook(ResourceNotificationServi
 
         await notificationService.PublishUpdateAsync(hubResource, state => state with
         {
-            State = "Starting",
+            State = KnownResourceStates.Starting,
             CreationTimeStamp = DateTime.Now
         });
 
@@ -27,7 +27,7 @@ internal sealed class ProjectCommanderHubLifecycleHook(ResourceNotificationServi
 
             await notificationService.PublishUpdateAsync(hubResource, state => state with
             {
-                State = "Running",
+                State = KnownResourceStates.Running,
                 StartTimeStamp = DateTime.Now,
                 Properties = [.. state.Properties, new("HubUrl", hubUrl)]
             });
@@ -38,7 +38,7 @@ internal sealed class ProjectCommanderHubLifecycleHook(ResourceNotificationServi
 
             await notificationService.PublishUpdateAsync(hubResource, state => state with
             {
-                State = "Failed"
+                State = KnownResourceStates.FailedToStart
             });
         }
     }
