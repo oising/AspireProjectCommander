@@ -8,6 +8,11 @@ using Microsoft.Extensions.Logging;
 
 namespace CommunityToolkit.Aspire.Hosting.ProjectCommander;
 
+/// <summary>
+/// 
+/// </summary>
+/// <param name="name"></param>
+/// <param name="options"></param>
 public sealed class ProjectCommanderHubResource([ResourceName] string name, ProjectCommanderHubOptions options)
     : Resource(name), IResourceWithConnectionString, IAsyncDisposable
 {
@@ -63,6 +68,10 @@ public sealed class ProjectCommanderHubResource([ResourceName] string name, Proj
         ReferenceExpression.Create(
             $"{(options.UseHttps ? "https" : "http")}://localhost:{options.HubPort.ToString()}/{options.HubPath!.TrimStart('/')}");
 
+    /// <summary>
+    /// Disposes hosted resources
+    /// </summary>
+    /// <returns></returns>
     public async ValueTask DisposeAsync()
     {
         if (_web != null) await _web.DisposeAsync();

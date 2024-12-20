@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Azure.Messaging.EventHubs" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CommunityToolkit.Aspire.ProjectCommander\CommunityToolkit.Aspire.ProjectCommander.csproj" />
+    <ProjectReference Include="..\..\ProjectCommander.ServiceDefaults\ProjectCommander.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+</Project>

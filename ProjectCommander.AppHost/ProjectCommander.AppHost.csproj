@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="9.0.0" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsAspireHost>true</IsAspireHost>
+    <UserSecretsId>eeec0d2f-01e7-4dc0-9f42-0adb1c6086c0</UserSecretsId>
+    <GenerateDocumentationFile>False</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="9.0.0" />
+    <PackageReference Include="Aspire.Hosting.Azure.EventHubs" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CommunityToolkit.Aspire.Hosting.ProjectCommander\CommunityToolkit.Aspire.Hosting.ProjectCommander.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\Sample\Consumer\Consumer.csproj" />
+    <ProjectReference Include="..\Sample\DataGenerator\DataGenerator.csproj" />
+  </ItemGroup>
+
+</Project>

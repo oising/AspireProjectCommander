@@ -5,7 +5,13 @@ namespace CommunityToolkit.Aspire.Hosting.ProjectCommander;
 /// </summary>
 public class ProjectCommanderHubOptions
 {
+    /// <summary>
+    /// Default port the hub will listen on.
+    /// </summary>
     public const int DefaultHubPort = 27960;
+    /// <summary>
+    /// Default path the hub will listen on.
+    /// </summary>
     public const string DefaultHubPath = "/projectcommander";
 
     /// <summary>

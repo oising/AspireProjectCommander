@@ -6,8 +6,19 @@ using Microsoft.Extensions.DependencyInjection;
 // ReSharper disable once CheckNamespace
 namespace Aspire.Hosting;
 
+/// <summary>
+/// Extension methods for configuring the Aspire Project Commander.
+/// </summary>
 public static class ResourceBuilderProjectCommanderExtensions
 {
+    /// <summary>
+    /// Adds project commands to a project resource.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="builder"></param>
+    /// <param name="commands"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
     public static IResourceBuilder<T> WithProjectCommands<T>(
         this IResourceBuilder<T> builder, params (string Name, string DisplayName)[] commands)
         where T : ProjectResource

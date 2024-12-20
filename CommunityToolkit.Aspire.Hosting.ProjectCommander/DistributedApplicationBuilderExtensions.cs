@@ -4,13 +4,31 @@ using Aspire.Hosting.Lifecycle;
 
 namespace CommunityToolkit.Aspire.Hosting.ProjectCommander;
 
+/// <summary>
+/// Extension methods for configuring the Aspire Project Commander resource.
+/// </summary>
 public static class DistributedApplicationBuilderExtensions
 {
+    /// <summary>
+    /// Adds the Aspire Project Commander resource to the application model.
+    /// </summary>
+    /// <param name="builder"></param>
+    /// <returns></returns>
     public static IResourceBuilder<ProjectCommanderHubResource> AddAspireProjectCommander(this IDistributedApplicationBuilder builder)
     {       
         return AddAspireProjectCommander(builder, new ProjectCommanderHubOptions());
     }
 
+    /// <summary>
+    /// Adds the Aspire Project Commander resource to the application model.
+    /// </summary>
+    /// <param name="builder"></param>
+    /// <param name="options"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    /// <exception cref="ArgumentNullException"></exception>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    /// <exception cref="ArgumentException"></exception>
     public static IResourceBuilder<ProjectCommanderHubResource> AddAspireProjectCommander(this IDistributedApplicationBuilder builder, ProjectCommanderHubOptions options)
     {
         if (builder.Resources.Any(r => r.Name == "project-commander"))

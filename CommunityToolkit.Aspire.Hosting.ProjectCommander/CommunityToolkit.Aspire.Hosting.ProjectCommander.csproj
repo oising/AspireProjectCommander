@@ -14,6 +14,7 @@
 		<Description>Aspire Project Commander is a set of packages that lets you send simple string commands from the dashboard directly to projects.</Description>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageTags>aspire hosting integration apphost signal</PackageTags>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 	</PropertyGroup>
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
