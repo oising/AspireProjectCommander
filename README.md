@@ -1,5 +1,8 @@
 # <img src="https://github.com/microsoft/fluentui-system-icons/blob/master/assets/Desktop Signal/SVG/ic_fluent_desktop_signal_24_filled.svg?raw=true" width="24" height="24" align="absmiddle"> Aspire Project Commander
 
+
+Version: 1.0.0-beta1
+
 Aspire Project commander is a set of packages that lets you send simple string commands from the dashboard directly to projects.
 
 ## Custom Resource Commands
