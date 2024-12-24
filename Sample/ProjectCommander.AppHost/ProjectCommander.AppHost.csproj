@@ -18,9 +18,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CommunityToolkit.Aspire.Hosting.ProjectCommander\CommunityToolkit.Aspire.Hosting.ProjectCommander.csproj" IsAspireProjectResource="false" />
-    <ProjectReference Include="..\Sample\Consumer\Consumer.csproj" />
-    <ProjectReference Include="..\Sample\DataGenerator\DataGenerator.csproj" />
+    <ProjectReference Include="..\..\Src\CommunityToolkit.Aspire.Hosting.ProjectCommander\CommunityToolkit.Aspire.Hosting.ProjectCommander.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\Consumer\Consumer.csproj" />
+    <ProjectReference Include="..\DataGenerator\DataGenerator.csproj" />
   </ItemGroup>
 
 </Project>

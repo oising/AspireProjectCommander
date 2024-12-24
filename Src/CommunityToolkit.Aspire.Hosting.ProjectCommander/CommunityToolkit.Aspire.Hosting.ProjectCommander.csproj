@@ -15,17 +15,22 @@
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageTags>aspire hosting integration apphost signal</PackageTags>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<EnablePackageValidation>true</EnablePackageValidation>
 	</PropertyGroup>
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
 	</ItemGroup>
 	<ItemGroup>
-		<None Include="..\README.md">
+		<None Include="..\..\README.md">
 			<Pack>True</Pack>
 			<PackagePath>\</PackagePath>
 		</None>
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Aspire.Hosting" Version="9.0.0" />
+		<PackageReference Include="DotNet.ReproducibleBuilds" Version="1.1.1">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+		</PackageReference>
 	</ItemGroup>
 </Project>

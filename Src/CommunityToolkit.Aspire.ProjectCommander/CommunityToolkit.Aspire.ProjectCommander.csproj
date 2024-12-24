@@ -15,9 +15,10 @@
 		<Description>Aspire Project Commander is a set of packages that lets you send simple string commands from the dashboard directly to projects.</Description>
 		<PackageTags>aspire hosting integration apphost signal</PackageTags>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<EnablePackageValidation>true</EnablePackageValidation>
 	</PropertyGroup>
 	<ItemGroup>
-		<None Include="..\README.md">
+		<None Include="..\..\README.md">
 			<Pack>True</Pack>
 			<PackagePath>\</PackagePath>
 		</None>
@@ -25,5 +26,9 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.11" />
 		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.1" />
+		<PackageReference Include="DotNet.ReproducibleBuilds" Version="1.1.1">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+		</PackageReference>
 	</ItemGroup>
 </Project>
