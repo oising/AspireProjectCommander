@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Src\CommunityToolkit.Aspire.Hosting.ProjectCommander\CommunityToolkit.Aspire.Hosting.ProjectCommander.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\..\Src\Nivot.Aspire.Hosting.ProjectCommander\Nivot.Aspire.Hosting.ProjectCommander.csproj" IsAspireProjectResource="false" />
     <ProjectReference Include="..\Consumer\Consumer.csproj" />
     <ProjectReference Include="..\DataGenerator\DataGenerator.csproj" />
   </ItemGroup>
