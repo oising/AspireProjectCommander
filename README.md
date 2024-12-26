@@ -13,6 +13,8 @@ This project and its associated NuGet packages allow you to send simple commands
 
 ## Example
 
+See the `Sample` folder for an Aspire example that allows you to signal a data generator project that is writing messages into an emulator instance of Azure Event Hubs. 
+
 ### AppHost Hosting
 
 ```csharp
@@ -24,7 +26,7 @@ builder.AddProject<Projects.DataGenerator>("eventhub-datagenerator")
     // provides commander signalr hub connectionstring to integration 
     .WithReference(commander)
     // array of simple tuples with the command string and a display value for the dashbaord 
-    .WithProjectCommands((Name: "start", DisplayName: "Start Generator"), ("stop", "Stop Generator"))
+    .WithProjectCommands((Name: "slow", DisplayName: "Go Slow"), ("fast", "Go Fast"))
     // wait for commander signalr hub to be ready    
     .WaitFor(commander);
 
@@ -32,6 +34,7 @@ var app = builder.Build();
 
 await app.RunAsync();
 ```
+![image](https://github.com/user-attachments/assets/c1eb70e7-410e-49e6-92ba-db66ae7be563)
 
 ### Project Integration
 
