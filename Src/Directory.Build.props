@@ -7,6 +7,7 @@
 	<RepositoryType>git</RepositoryType>
 	<RepositoryUrl>https://github.com/oising/AspireProjectCommander/</RepositoryUrl>
 	<PackageProjectUrl>https://github.com/oising/AspireProjectCommander/</PackageProjectUrl>
+	<PackageIcon>icon.png</PackageIcon>
 	<PackageReadmeFile>README.md</PackageReadmeFile>
 	<Description>Aspire Project Commander is a set of packages that lets you send simple string commands from the dashboard directly to projects.</Description>
 	<PackageTags>aspire hosting integration apphost signal</PackageTags>
@@ -15,6 +16,7 @@
 	<GenerateDocumentationFile>True</GenerateDocumentationFile>
 	<EnablePackageValidation>true</EnablePackageValidation>
 	<PackageVersion>1.0.0-beta1</PackageVersion>
+	<Authors>oisin</Authors>
 </PropertyGroup>
 <ItemGroup>
 	<None Include="..\..\README.md">
