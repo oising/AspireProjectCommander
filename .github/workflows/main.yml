@@ -34,6 +34,8 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
 
+    - run: dotnet build ./Packages.sln --configuration Release
+
     # Create the NuGet package in the folder from the environment variable NuGetDirectory
     - run: dotnet pack ./Packages.sln --configuration Release --output ${{ env.NuGetDirectory }}
 
