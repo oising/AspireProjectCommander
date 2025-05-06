@@ -15,7 +15,7 @@
 	<EnablePackageValidation>true</EnablePackageValidation>
 	<GenerateDocumentationFile>True</GenerateDocumentationFile>
 	<EnablePackageValidation>true</EnablePackageValidation>
-	<PackageVersion>1.0.1</PackageVersion>
+	<PackageVersion>1.0.2</PackageVersion>
 	<Authors>oisin</Authors>
 </PropertyGroup>
 <ItemGroup>
