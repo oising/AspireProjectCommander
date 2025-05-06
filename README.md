@@ -10,8 +10,8 @@ Aspire Project commander is a set of packages that lets you send simple string c
 
 |Type|Name|Status|
 |-|-|-|
-|Integration|`Nivot.Aspire.ProjectCommander`|[![NuGet pre version](https://badgen.net/nuget/v/Nivot.Aspire.ProjectCommander/pre)](https://www.nuget.org/packages/Nivot.Aspire.ProjectCommander)|
-|Hosting|`Nivot.Aspire.Hosting.ProjectCommander`|[![NuGet pre version](https://badgen.net/nuget/v/Nivot.Aspire.Hosting.ProjectCommander/pre)](https://www.nuget.org/packages/Nivot.Aspire.Hosting.ProjectCommander)|
+|Integration|`Nivot.Aspire.ProjectCommander`|![NuGet Version](https://img.shields.io/nuget/v/Nivot.Aspire.ProjectCommander)|
+|Hosting|`Nivot.Aspire.Hosting.ProjectCommander`|![NuGet Version](https://img.shields.io/nuget/v/Nivot.Aspire.Hosting.ProjectCommander)|
 
 ## Custom Resource Commands
 [Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/) allows adding [custom commands](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/custom-resource-commands) to any project in the dashboard but these commands are scoped to and handled in the AppHost itself. These are useful to send commands to APIs on running containers, such as performing a `FLUSHALL` on a Redis container to reset state. Ultimately, the `WithCommand` resource extension method requires you to interface with each target resource (e.g. `Executable`, `Container`, `Project`) independently, using code you write yourself.
