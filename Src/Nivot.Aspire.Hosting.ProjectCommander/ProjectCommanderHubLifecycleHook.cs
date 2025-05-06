@@ -1,10 +1,15 @@
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Eventing;
 using Aspire.Hosting.Lifecycle;
 using Microsoft.Extensions.Logging;
 
 namespace CommunityToolkit.Aspire.Hosting.ProjectCommander;
 
-internal sealed class ProjectCommanderHubLifecycleHook(ResourceNotificationService notificationService, ResourceLoggerService loggerService) : IDistributedApplicationLifecycleHook
+internal sealed class ProjectCommanderHubLifecycleHook(
+    ResourceNotificationService notificationService,
+    ResourceLoggerService loggerService,
+    IDistributedApplicationEventing eventing,
+    IServiceProvider services) : IDistributedApplicationLifecycleHook
 {
     public async Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
     {
@@ -21,6 +26,9 @@ internal sealed class ProjectCommanderHubLifecycleHook(ResourceNotificationServi
 
         try
         {
+            await eventing.PublishAsync(
+                new BeforeResourceStartedEvent(hubResource, services), cancellationToken);
+
             await hubResource.StartHubAsync();
 
             var hubUrl = await hubResource.ConnectionStringExpression.GetValueAsync(cancellationToken);
