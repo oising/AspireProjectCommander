@@ -5,13 +5,13 @@ on:
   workflow_dispatch: # Allow running the workflow manually from the GitHub UI
   push:
     branches:
-      - 'main'       # Run the workflow when pushing to the main branch
+      - "main" # Run the workflow when pushing to the main branch
   pull_request:
     branches:
-      - '*'          # Run the workflow for all pull requests
+      - "*" # Run the workflow for all pull requests
   release:
     types:
-      - published    # Run the workflow when a new GitHub release is published
+      - published # Run the workflow when a new GitHub release is published
 
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
@@ -26,37 +26,37 @@ jobs:
   create_nuget:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0 # Get all history to allow automatic versioning using MinVer
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Get all history to allow automatic versioning using MinVer
 
-    # Install the .NET SDK indicated in the global.json file
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      # Install the .NET SDK indicated in the global.json file
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
 
-    - run: dotnet build ./Packages.sln --configuration Release /p:ContinuousIntegrationBuild=true 
+      - run: dotnet build ./Packages.sln --configuration Release /p:ContinuousIntegrationBuild=true
 
-    # Create the NuGet package in the folder from the environment variable NuGetDirectory
-    - run: dotnet pack ./Packages.sln --configuration Release --output ${{ env.NuGetDirectory }} /p:ContinuousIntegrationBuild=true
+      # Create the NuGet package in the folder from the environment variable NuGetDirectory
+      - run: dotnet pack ./Packages.sln --configuration Release --output ${{ env.NuGetDirectory }} /p:ContinuousIntegrationBuild=true
 
-    # Publish the NuGet package as an artifact, so they can be used in the following jobs
-    - uses: actions/upload-artifact@v3
-      with:
-        name: nuget
-        if-no-files-found: error
-        retention-days: 7
-        path: ${{ env.NuGetDirectory }}/*.nupkg
+      # Publish the NuGet package as an artifact, so they can be used in the following jobs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nuget
+          if-no-files-found: error
+          retention-days: 7
+          path: ${{ env.NuGetDirectory }}/*.nupkg
 
   validate_nuget:
     runs-on: ubuntu-latest
-    needs: [ create_nuget ]
+    needs: [create_nuget]
     steps:
       # Install the .NET SDK indicated in the global.json file
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
 
       # Download the NuGet package created in the previous job
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: nuget
           path: ${{ env.NuGetDirectory }}
@@ -74,11 +74,11 @@ jobs:
   run_test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-    - name: Run tests
-      run: dotnet test ./Packages.sln --configuration Release
+      - uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+      - name: Run tests
+        run: dotnet test ./Packages.sln --configuration Release
 
   deploy:
     # Publish only when creating a GitHub Release
@@ -86,10 +86,10 @@ jobs:
     # You can update this logic if you want to manage releases differently
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
-    needs: [ validate_nuget, run_test ]
+    needs: [validate_nuget, run_test]
     steps:
       # Download the NuGet package created in the previous job
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: nuget
           path: ${{ env.NuGetDirectory }}
