@@ -20,9 +20,6 @@ internal sealed class ProjectCommanderHub(ILogger logger, ResourceLoggerService 
 
         int taken = 0;
 
-        static (int LineNumber, string Content, bool IsErrorMessage) ToTuple(LogLine logLine) =>
-            (logLine.LineNumber, logLine.Content, logLine.IsErrorMessage);
-
         // resolve IResource from resource name
         var resource = appModel.Resources.SingleOrDefault(r => r.Name == resourceName);
         if (resource is null)
