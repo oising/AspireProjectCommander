@@ -16,7 +16,7 @@
 	  </None>
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="Aspire.Hosting" Version="9.2.1" />
+		<PackageReference Include="Aspire.Hosting" Version="9.3.0" />
 		<PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.25">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>

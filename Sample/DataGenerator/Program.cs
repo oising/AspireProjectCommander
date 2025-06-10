@@ -9,8 +9,7 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddAspireProjectCommanderClient();
 
-builder.AddAzureEventHubProducerClient("data",
-    settings => settings.EventHubName = "hub");
+builder.AddAzureEventHubProducerClient("hub");
 
 builder.Services.AddHostedService<DataGeneratorWorker>();
 

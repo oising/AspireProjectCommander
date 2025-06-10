@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "aspirlog": {
+      "commandName": "Project",
+      "commandLineArgs": "datagenerator"
+    }
+  }
+}

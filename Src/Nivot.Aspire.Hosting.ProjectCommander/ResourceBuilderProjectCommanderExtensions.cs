@@ -50,7 +50,10 @@ public static class ResourceBuilderProjectCommanderExtensions
                     errorMessage = ex.Message;
                 }
                 return new ExecuteCommandResult() { Success = success, ErrorMessage = errorMessage };
-            }, iconName: "DesktopSignal", iconVariant: IconVariant.Regular);
+            }, new CommandOptions {
+                IconName = "DesktopSignal",
+                IconVariant = IconVariant.Regular
+            });
         }
 
         return builder;
