@@ -19,6 +19,9 @@ Aspire Project commander is a set of packages that lets you send simple string c
 ## Custom Project Commands (New!)
 This project and its associated NuGet packages allow you to send simple commands directly to `Project` type resources, that is to say, regular dotnet projects you're writing yourself. Register some simple string commands in the [Aspire Dashboard](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/dashboard/overview?tabs=bash) -- for example "start-messages", "stop-messages" -- using the [hosting](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/app-host-overview?tabs=docker) package `Nivot.Aspire.Hosting.ProjectCommander`, and then use the [integration](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/integrations-overview) package `Nivot.Aspire.ProjectCommander` to receive commands in your message generating project that you're using to dump data into an Azure Event Hubs emulator. 
 
+## Remote resource log viewing (New!)
+Some people may prefer to stream resource logs in a terminal window. See the `SpiraLog` sample in the source. 
+
 ## Example
 
 See the `Sample` folder for an Aspire example that allows you to signal a data generator project that is writing messages into an emulator instance of Azure Event Hubs. 
