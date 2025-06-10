@@ -24,6 +24,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectCommander.Tests", "ProjectCommander.Tests\ProjectCommander.Tests.csproj", "{3FA2AEB2-18B5-4DF8-A556-09492F6408D4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpiraLog", "Sample\SpiraLog\SpiraLog.csproj", "{D45D1DF8-C846-1C71-D6DD-AC07B173733A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,6 +60,10 @@ Global
 		{3FA2AEB2-18B5-4DF8-A556-09492F6408D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3FA2AEB2-18B5-4DF8-A556-09492F6408D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3FA2AEB2-18B5-4DF8-A556-09492F6408D4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D45D1DF8-C846-1C71-D6DD-AC07B173733A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D45D1DF8-C846-1C71-D6DD-AC07B173733A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D45D1DF8-C846-1C71-D6DD-AC07B173733A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D45D1DF8-C846-1C71-D6DD-AC07B173733A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -67,5 +73,9 @@ Global
 		{DECE34B3-8776-4684-A92F-8B9C8A1147A7} = {A12F2526-69A6-444C-82CA-49DAAB8D0C7E}
 		{62A936C1-61B6-479A-81CB-1B864E093332} = {A12F2526-69A6-444C-82CA-49DAAB8D0C7E}
 		{6F6EF83D-432C-48DC-8C5C-50356F6A97DA} = {A12F2526-69A6-444C-82CA-49DAAB8D0C7E}
+		{D45D1DF8-C846-1C71-D6DD-AC07B173733A} = {A12F2526-69A6-444C-82CA-49DAAB8D0C7E}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {812F688B-A919-42B2-9FC8-B26C65E615C0}
 	EndGlobalSection
 EndGlobal

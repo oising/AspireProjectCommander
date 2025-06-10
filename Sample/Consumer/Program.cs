@@ -7,8 +7,7 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.AddServiceDefaults();
 
-builder.AddAzureEventHubConsumerClient("data",
-    settings => settings.EventHubName = "hub");
+builder.AddAzureEventHubConsumerClient("hub");
 
 builder.Services.AddHostedService<ConsumerWorker>();
 

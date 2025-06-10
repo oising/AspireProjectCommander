@@ -14,9 +14,10 @@ internal sealed class ProjectCommanderHubLifecycleHook(
     public async Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
     {
         var hubResource = appModel.Resources.OfType<ProjectCommanderHubResource>().Single();
-
+        
         var logger = loggerService.GetLogger(hubResource);
-        hubResource.SetLogger(logger);
+        hubResource.SetLogger(loggerService);
+        hubResource.SetModel(appModel);
 
         await notificationService.PublishUpdateAsync(hubResource, state => state with
         {

@@ -5,8 +5,8 @@ var builder = DistributedApplication.CreateBuilder(args);
 var commander = builder.AddAspireProjectCommander();
 
 var datahub = builder.AddAzureEventHubs("data")
-    .AddEventHub("hub")
-    .RunAsEmulator();
+    .RunAsEmulator()
+    .AddHub("hub");
 
 builder.AddProject<Projects.DataGenerator>("datagenerator")
     .WithReference(datahub)

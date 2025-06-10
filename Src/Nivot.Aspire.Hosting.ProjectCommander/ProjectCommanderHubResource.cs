@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using Aspire.Hosting.ApplicationModel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -18,6 +19,8 @@ public sealed class ProjectCommanderHubResource([ResourceName] string name, Proj
 {
     private WebApplication? _web;
     private ILogger? _logger;
+    private ResourceLoggerService? _resourceLogger;
+    private DistributedApplicationModel _appModel;
 
     internal async Task StartHubAsync()
     {
@@ -28,26 +31,38 @@ public sealed class ProjectCommanderHubResource([ResourceName] string name, Proj
         _logger?.LogInformation("Aspire Project Commander Hub started");
     }
 
-    internal void SetLogger(ILogger logger) => _logger = logger;
+    internal void SetLogger(ResourceLoggerService logger) => _resourceLogger = logger;
+
+    internal void SetModel(DistributedApplicationModel appModel) => _appModel = appModel;
 
     internal IHubContext<ProjectCommanderHub>? Hub { get; set; }
 
     private IHubContext<ProjectCommanderHub> BuildHub()
     {
         // we need the logger to be set before building the hub so we can inject it
-        Debug.Assert(_logger != null, "Logger must be set before building hub");
+        Debug.Assert(_resourceLogger != null, "ResourceLoggerService must be set before building hub");
+        _logger = _resourceLogger.GetLogger(this);
+        
+        Debug.Assert(_appModel != null, "DistributedApplicationModel must be set before building hub");
 
-        _logger?.LogInformation("Building SignalR Hub");
+        _logger.LogInformation("Building SignalR Hub");
 
         // signalr project command host setup
         var host = WebApplication.CreateBuilder();
 
+        // used for streaming logs to clients
+        host.Services.AddSingleton(_resourceLogger);
+
+        // require to resolve IResource from resource names
+        host.Services.AddSingleton(_appModel);
+
         // proxy logging to AppHost logger
-        host.Services.AddSingleton(_logger!);
+        host.Services.AddSingleton(_logger);
 
         host.WebHost.UseUrls($"{(options.UseHttps ? "https" : "http")}://localhost:{options.HubPort}");
 
-        host.Services.AddSignalR();
+        host.Services.AddSignalR()
+            .AddJsonProtocol(json => json.PayloadSerializerOptions.IncludeFields = true);
 
         _web = host.Build();
         _web.UseRouting();
