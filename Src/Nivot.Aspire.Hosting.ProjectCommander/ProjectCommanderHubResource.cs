@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text.Json;
 using Aspire.Hosting.ApplicationModel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -20,7 +19,7 @@ public sealed class ProjectCommanderHubResource([ResourceName] string name, Proj
     private WebApplication? _web;
     private ILogger? _logger;
     private ResourceLoggerService? _resourceLogger;
-    private DistributedApplicationModel _appModel;
+    private DistributedApplicationModel? _appModel;
 
     internal async Task StartHubAsync()
     {
