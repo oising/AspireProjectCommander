@@ -61,7 +61,7 @@ internal sealed class ProjectCommanderHub(ILogger logger, ResourceLoggerService 
                 {
                     // Return partial batch to reach exactly 'take' logs
                     yield return logs.Take(remaining).ToList();
-                    _ = take.Value;
+                    taken = take.Value;
                     break;
                 }
             }
