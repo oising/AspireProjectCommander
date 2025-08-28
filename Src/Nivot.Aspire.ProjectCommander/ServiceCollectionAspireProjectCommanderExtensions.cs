@@ -13,13 +13,12 @@ public static class ServiceCollectionAspireProjectCommanderExtensions
     /// Adds the Aspire Project Commander client to the service collection.
     /// </summary>
     /// <param name="services"></param>
-    /// <param name="unknown"></param>
     /// <returns></returns>
-    public static IServiceCollection AddAspireProjectCommanderClient(this IServiceCollection services, object? unknown = null)
+    public static IServiceCollection AddAspireProjectCommanderClient(this IServiceCollection services)
     {
         var sp = services.BuildServiceProvider();
         
-        if (sp.GetService<IAspireProjectCommanderClient>() == null)
+        if (sp.GetService<IAspireProjectCommanderClient>() is null)
         {
             var worker = ActivatorUtilities.CreateInstance<AspireProjectCommanderClientWorker>(sp);
             services.AddSingleton<IHostedService>(worker);
