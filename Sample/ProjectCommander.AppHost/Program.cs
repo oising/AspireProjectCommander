@@ -13,7 +13,9 @@ builder.AddProject<Projects.DataGenerator>("datagenerator")
     .WithReference(commander)
     .WaitFor(commander)
     .WaitFor(datahub)
-    .WithProjectCommands(("slow", "Go Slow"), ("fast", "Go Fast"));
+    .WithProjectCommands(
+        new("slow", "Go Slow"),
+        new("fast", "Go Fast"));
 
 builder.AddProject<Projects.Consumer>("consumer")
     .WithReference(datahub)

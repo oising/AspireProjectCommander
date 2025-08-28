@@ -1,6 +1,9 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Lifecycle;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using System.Threading;
 
 namespace CommunityToolkit.Aspire.Hosting.ProjectCommander;
 
@@ -48,10 +51,38 @@ public static class DistributedApplicationBuilderExtensions
         {
             throw new ArgumentException("HubPath must be a valid path", nameof(options.HubPath));
         }
-
-        builder.Services.TryAddLifecycleHook<ProjectCommanderHubLifecycleHook>();
-       
+        
         var resource = new ProjectCommanderHubResource("project-commander", options);
+
+        builder.Eventing.Subscribe<InitializeResourceEvent>(resource, async (e, ct) =>
+        {
+            var notify = e.Services.GetRequiredService<ResourceNotificationService>();
+            await notify.PublishUpdateAsync(resource, state => state with
+            {
+                State = KnownResourceStates.Starting,
+                CreationTimeStamp = DateTime.Now
+            });
+
+            var logger = e.Services.GetRequiredService<ResourceLoggerService>().GetLogger(resource);
+            var model = e.Services.GetRequiredService<DistributedApplicationModel>();
+            resource.SetLogger(e.Services.GetRequiredService<ResourceLoggerService>());
+            resource.SetModel(model);
+            logger.LogInformation("Initializing Aspire Project Commander Resource");
+
+            await builder.Eventing.PublishAsync(
+                new BeforeResourceStartedEvent(resource, e.Services), ct);
+
+            await resource.StartHubAsync().ConfigureAwait(false);
+
+            var hubUrl = await resource.ConnectionStringExpression.GetValueAsync(ct);
+
+            await notify.PublishUpdateAsync(resource, state => state with
+            {
+                State = KnownResourceStates.Running,
+                StartTimeStamp = DateTime.Now,
+                Properties = [.. state.Properties, new("hub.url", hubUrl)]
+            });
+        });
 
         return builder.AddResource(resource)
             .WithInitialState(new()
@@ -60,7 +91,10 @@ public static class DistributedApplicationBuilderExtensions
                 State = "Stopped",
                 Properties = [
                     new(CustomResourceKnownProperties.Source, "Project Commander"),
-                ]
+                ],
+#if !DEBUG
+                IsHidden = true
+#endif
             })
             .ExcludeFromManifest();
     }

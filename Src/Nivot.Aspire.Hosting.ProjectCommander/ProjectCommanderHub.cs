@@ -1,5 +1,5 @@
 using Aspire.Hosting.ApplicationModel;
-using Microsoft.AspNetCore.Razor.Hosting;
+using JetBrains.Annotations;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 
@@ -7,6 +7,7 @@ namespace CommunityToolkit.Aspire.Hosting.ProjectCommander;
 
 internal sealed class ProjectCommanderHub(ILogger logger, ResourceLoggerService resourceLogger, DistributedApplicationModel appModel) : Hub
 {
+    [UsedImplicitly]
     public async Task Identify([ResourceName] string resourceName)
     {
         logger.LogInformation("{ResourceName} connected to Aspire Project Commander Hub", resourceName);
@@ -52,7 +53,7 @@ internal sealed class ProjectCommanderHub(ILogger logger, ResourceLoggerService 
                 {
                     // Return partial batch to reach exactly 'take' logs
                     yield return logs.Take(remaining).ToList();
-                    taken = take.Value;
+                    _ = take.Value;
                     break;
                 }
             }
