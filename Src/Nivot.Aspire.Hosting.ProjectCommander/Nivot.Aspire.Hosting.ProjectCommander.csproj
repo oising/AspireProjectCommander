@@ -21,5 +21,6 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="JetBrains.Annotations" Version="2025.2.0" />
 	</ItemGroup>
 </Project>

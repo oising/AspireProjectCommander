@@ -7,6 +7,14 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Aspire.Hosting;
 
 /// <summary>
+/// Represents a command associated with a project, including its name and display name.
+/// </summary>
+/// <param name="Name">The unique name of the command. This value is typically used as an identifier.</param>
+/// <param name="DisplayName">The user-friendly name of the command, intended for display in UI or logs.</param>
+/// <param name="Arguments">Optional arguments to pass to the command.</param>
+public record ProjectCommand(string Name, string DisplayName, params string[] Arguments);
+
+/// <summary>
 /// Extension methods for configuring the Aspire Project Commander.
 /// </summary>
 public static class ResourceBuilderProjectCommanderExtensions
@@ -20,14 +28,14 @@ public static class ResourceBuilderProjectCommanderExtensions
     /// <returns></returns>
     /// <exception cref="ArgumentException"></exception>
     public static IResourceBuilder<T> WithProjectCommands<T>(
-        this IResourceBuilder<T> builder, params (string Name, string DisplayName)[] commands)
+        this IResourceBuilder<T> builder, params ProjectCommand[] commands)
         where T : ProjectResource
     {
         if (commands.Length == 0)
         {
             throw new ArgumentException("You must supply at least one command.");
         }
-        
+
         foreach (var command in commands)
         {
             builder.WithCommand(command.Name, command.DisplayName, async (context) =>
@@ -39,7 +47,7 @@ public static class ResourceBuilderProjectCommanderExtensions
                 {
                     var model = context.ServiceProvider.GetRequiredService<DistributedApplicationModel>();
                     var hub = model.Resources.OfType<ProjectCommanderHubResource>().Single().Hub!;
-                    
+
                     var groupName = context.ResourceName;
                     await hub.Clients.Group(groupName).SendAsync("ReceiveCommand", command.Name, context.CancellationToken);
 
@@ -50,7 +58,9 @@ public static class ResourceBuilderProjectCommanderExtensions
                     errorMessage = ex.Message;
                 }
                 return new ExecuteCommandResult() { Success = success, ErrorMessage = errorMessage };
-            }, new CommandOptions {
+            },
+            new CommandOptions
+            {
                 IconName = "DesktopSignal",
                 IconVariant = IconVariant.Regular
             });

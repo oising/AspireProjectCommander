@@ -18,7 +18,7 @@ public static class ServiceCollectionAspireProjectCommanderExtensions
     {
         var sp = services.BuildServiceProvider();
         
-        if (sp.GetService<IAspireProjectCommanderClient>() == null)
+        if (sp.GetService<IAspireProjectCommanderClient>() is null)
         {
             var worker = ActivatorUtilities.CreateInstance<AspireProjectCommanderClientWorker>(sp);
             services.AddSingleton<IHostedService>(worker);
