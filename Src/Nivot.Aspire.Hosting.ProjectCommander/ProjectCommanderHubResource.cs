@@ -9,40 +9,32 @@ using Microsoft.Extensions.Logging;
 namespace CommunityToolkit.Aspire.Hosting.ProjectCommander;
 
 /// <summary>
-/// 
+/// Represents the Aspire Project Commander SignalR Hub Aspire resource.
 /// </summary>
-/// <param name="name"></param>
 /// <param name="options"></param>
-public sealed class ProjectCommanderHubResource([ResourceName] string name, ProjectCommanderHubOptions options)
-    : Resource(name), IResourceWithConnectionString, IAsyncDisposable
+public sealed class ProjectCommanderHubResource(ProjectCommanderHubOptions options)
+    : Resource(ResourceName), IResourceWithConnectionString, IAsyncDisposable
 {
+    internal const string ResourceName = "project-commander";
+
     private WebApplication? _web;
     private ILogger? _logger;
-    private ResourceLoggerService? _resourceLogger;
-    private DistributedApplicationModel? _appModel;
 
-    internal async Task StartHubAsync()
+    internal async Task StartHubAsync(ResourceLoggerService loggerService, DistributedApplicationModel model)
     {
-        Hub = BuildHub();
+        Hub = BuildHub(loggerService, model);
 
         await (_web!.StartAsync()).ConfigureAwait(false);
 
         _logger?.LogInformation("Aspire Project Commander Hub started");
     }
 
-    internal void SetLogger(ResourceLoggerService logger) => _resourceLogger = logger;
-
-    internal void SetModel(DistributedApplicationModel appModel) => _appModel = appModel;
-
     internal IHubContext<ProjectCommanderHub>? Hub { get; set; }
 
-    private IHubContext<ProjectCommanderHub> BuildHub()
+    private IHubContext<ProjectCommanderHub> BuildHub(ResourceLoggerService loggerService, DistributedApplicationModel model)
     {
-        // we need the logger to be set before building the hub so we can inject it
-        Debug.Assert(_resourceLogger != null, "ResourceLoggerService must be set before building hub");
-        _logger = _resourceLogger.GetLogger(this);
-        
-        Debug.Assert(_appModel != null, "DistributedApplicationModel must be set before building hub");
+        // Get logger for this resource
+        _logger = loggerService.GetLogger(this);
 
         _logger.LogInformation("Building SignalR Hub");
 
@@ -50,10 +42,10 @@ public sealed class ProjectCommanderHubResource([ResourceName] string name, Proj
         var host = WebApplication.CreateBuilder();
 
         // used for streaming logs to clients
-        host.Services.AddSingleton(_resourceLogger);
+        host.Services.AddSingleton(loggerService);
 
         // require to resolve IResource from resource names
-        host.Services.AddSingleton(_appModel);
+        host.Services.AddSingleton(model);
 
         // proxy logging to AppHost logger
         host.Services.AddSingleton(_logger);
@@ -65,7 +57,7 @@ public sealed class ProjectCommanderHubResource([ResourceName] string name, Proj
 
         _web = host.Build();
         _web.UseRouting();
-        _web.MapGet("/", () => "Aspire Project Commander Host 1.0, powered by SignalR.");
+        _web.MapGet("/", () => "Aspire Project Commander Host, powered by SignalR.");
         _web.MapHub<ProjectCommanderHub>(options.HubPath!);
 
         var hub = _web.Services.GetRequiredService<IHubContext<ProjectCommanderHub>>();

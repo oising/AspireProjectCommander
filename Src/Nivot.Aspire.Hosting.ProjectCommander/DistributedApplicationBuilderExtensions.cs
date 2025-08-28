@@ -1,9 +1,7 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
-using Aspire.Hosting.Lifecycle;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System.Threading;
 
 namespace CommunityToolkit.Aspire.Hosting.ProjectCommander;
 
@@ -34,9 +32,9 @@ public static class DistributedApplicationBuilderExtensions
     /// <exception cref="ArgumentException"></exception>
     public static IResourceBuilder<ProjectCommanderHubResource> AddAspireProjectCommander(this IDistributedApplicationBuilder builder, ProjectCommanderHubOptions options)
     {
-        if (builder.Resources.Any(r => r.Name == "project-commander"))
+        if (builder.Resources.Any(r => r.Name == ProjectCommanderHubResource.ResourceName))
         {
-            throw new InvalidOperationException("project-commander resource already exists in the application model");
+            throw new InvalidOperationException("ProjectCommanderHubResource already exists in the application model");
         }
 
         if (options == null) throw new ArgumentNullException(nameof(options));
@@ -52,7 +50,7 @@ public static class DistributedApplicationBuilderExtensions
             throw new ArgumentException("HubPath must be a valid path", nameof(options.HubPath));
         }
         
-        var resource = new ProjectCommanderHubResource("project-commander", options);
+        var resource = new ProjectCommanderHubResource(options);
 
         builder.Eventing.Subscribe<InitializeResourceEvent>(resource, async (e, ct) =>
         {
@@ -64,15 +62,15 @@ public static class DistributedApplicationBuilderExtensions
             });
 
             var logger = e.Services.GetRequiredService<ResourceLoggerService>().GetLogger(resource);
-            var model = e.Services.GetRequiredService<DistributedApplicationModel>();
-            resource.SetLogger(e.Services.GetRequiredService<ResourceLoggerService>());
-            resource.SetModel(model);
             logger.LogInformation("Initializing Aspire Project Commander Resource");
 
             await builder.Eventing.PublishAsync(
                 new BeforeResourceStartedEvent(resource, e.Services), ct);
 
-            await resource.StartHubAsync().ConfigureAwait(false);
+            var loggerFactory = e.Services.GetRequiredService<ResourceLoggerService>();
+            var model = e.Services.GetRequiredService<DistributedApplicationModel>();
+
+            await resource.StartHubAsync(loggerFactory, model).ConfigureAwait(false);
 
             var hubUrl = await resource.ConnectionStringExpression.GetValueAsync(ct);
 
@@ -90,7 +88,9 @@ public static class DistributedApplicationBuilderExtensions
                 ResourceType = "ProjectCommander",
                 State = "Stopped",
                 Properties = [
-                    new(CustomResourceKnownProperties.Source, "Project Commander"),
+                    new(
+                        CustomResourceKnownProperties.Source,
+                        "Project Commander Host"),
                 ],
 #if !DEBUG
                 IsHidden = true

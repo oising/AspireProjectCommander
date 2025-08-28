@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Src\Nivot.Aspire.ProjectCommander\Nivot.Aspire.ProjectCommander.csproj" />
     <ProjectReference Include="..\ProjectCommander.ServiceDefaults\ProjectCommander.ServiceDefaults.csproj" />
   </ItemGroup>
 

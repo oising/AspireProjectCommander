@@ -5,7 +5,13 @@ using Microsoft.Extensions.Logging;
 
 namespace CommunityToolkit.Aspire.Hosting.ProjectCommander;
 
-internal sealed class ProjectCommanderHub(ILogger logger, ResourceLoggerService resourceLogger, DistributedApplicationModel appModel) : Hub
+/// <summary>
+/// Represents the Aspire Project Commander SignalR Hub implementation.
+/// </summary>
+/// <param name="logger"></param>
+/// <param name="loggerService"></param>
+/// <param name="model"></param>
+internal sealed class ProjectCommanderHub(ILogger logger, ResourceLoggerService loggerService, DistributedApplicationModel model) : Hub
 {
     [UsedImplicitly]
     public async Task Identify([ResourceName] string resourceName)
@@ -15,21 +21,23 @@ internal sealed class ProjectCommanderHub(ILogger logger, ResourceLoggerService 
         await Groups.AddToGroupAsync(Context.ConnectionId, resourceName);
     }
 
+    [UsedImplicitly]
     public async IAsyncEnumerable<IReadOnlyList<LogLine>> WatchResourceLogs([ResourceName] string resourceName, int? take = null)
     {
-        logger.LogInformation("Getting {LinesWanted} logs for resource {ResourceName}", take?.ToString() ?? "all", resourceName);
+        logger.LogTrace("Getting {LinesWanted} logs for resource {ResourceName}", take?.ToString() ?? "all", resourceName);
 
         int taken = 0;
 
         // resolve IResource from resource name
-        var resource = appModel.Resources.SingleOrDefault(r => r.Name == resourceName);
+        var resource = model.Resources.SingleOrDefault(r => r.Name == resourceName);
+
         if (resource is null)
         {
             logger.LogWarning("Resource {ResourceName} not found", resourceName);
             yield break; // No matching resource found, exit
         }
 
-        await foreach (var logs in resourceLogger.WatchAsync(resource)
+        await foreach (var logs in loggerService.WatchAsync(resource)
             .WithCancellation(Context.ConnectionAborted)
             .ConfigureAwait(false))
         {

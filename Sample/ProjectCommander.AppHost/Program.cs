@@ -6,7 +6,13 @@ var commander = builder.AddAspireProjectCommander();
 
 var datahub = builder.AddAzureEventHubs("data")
     .RunAsEmulator()
-    .AddHub("hub");
+    .AddHub("hub")
+    .WithProperties(configure =>
+    {
+        configure.PartitionCount = 2;
+    });
+
+var client = datahub.AddConsumerGroup("client");
 
 builder.AddProject<Projects.DataGenerator>("datagenerator")
     .WithReference(datahub)
@@ -18,7 +24,8 @@ builder.AddProject<Projects.DataGenerator>("datagenerator")
         new("fast", "Go Fast"));
 
 builder.AddProject<Projects.Consumer>("consumer")
-    .WithReference(datahub)
+    .WithReference(commander)
+    .WithReference(client)
     .WaitFor(datahub);
 
 builder.Build().Run();

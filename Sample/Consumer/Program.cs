@@ -7,7 +7,9 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.AddServiceDefaults();
 
-builder.AddAzureEventHubConsumerClient("hub");
+builder.AddAzureEventHubConsumerClient("client");
+
+builder.Services.AddAspireProjectCommanderClient();
 
 builder.Services.AddHostedService<ConsumerWorker>();
 
