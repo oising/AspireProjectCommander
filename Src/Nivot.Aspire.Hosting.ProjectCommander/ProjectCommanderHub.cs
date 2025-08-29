@@ -13,6 +13,11 @@ namespace CommunityToolkit.Aspire.Hosting.ProjectCommander;
 /// <param name="model"></param>
 internal sealed class ProjectCommanderHub(ILogger logger, ResourceLoggerService loggerService, DistributedApplicationModel model) : Hub
 {
+    /// <summary>
+    /// Identifies the connecting client by adding it to a group named after the resource.
+    /// </summary>
+    /// <param name="resourceName"></param>
+    /// <returns></returns>
     [UsedImplicitly]
     public async Task Identify([ResourceName] string resourceName)
     {
@@ -21,6 +26,12 @@ internal sealed class ProjectCommanderHub(ILogger logger, ResourceLoggerService 
         await Groups.AddToGroupAsync(Context.ConnectionId, resourceName);
     }
 
+    /// <summary>
+    /// Allows remote clients to watch logs for a specific resource.
+    /// </summary>
+    /// <param name="resourceName"></param>
+    /// <param name="take"></param>
+    /// <returns></returns>
     [UsedImplicitly]
     public async IAsyncEnumerable<IReadOnlyList<LogLine>> WatchResourceLogs([ResourceName] string resourceName, int? take = null)
     {
