@@ -1,3 +1,5 @@
+#pragma warning disable ASPIREINTERACTION001
+
 using CommunityToolkit.Aspire.Hosting.ProjectCommander;
 
 var builder = DistributedApplication.CreateBuilder(args);
@@ -21,7 +23,9 @@ builder.AddProject<Projects.DataGenerator>("datagenerator")
     .WaitFor(datahub)
     .WithProjectCommands(
         new("slow", "Go Slow"),
-        new("fast", "Go Fast"));
+        new("fast", "Go Fast"),
+        new ProjectCommand("specify", "Specify Delay",
+            new InteractionInput { Label = "period", InputType = InputType.Number }));
 
 builder.AddProject<Projects.Consumer>("consumer")
     .WithReference(commander)

@@ -8,5 +8,5 @@ public interface IAspireProjectCommanderClient
     /// <summary>
     /// Occurs when a command is received. The name of the command is passed as an argument.
     /// </summary>
-    public event Func<string, IServiceProvider, Task> CommandReceived;
+    public event Func<string, string[], IServiceProvider, Task> CommandReceived;
 }

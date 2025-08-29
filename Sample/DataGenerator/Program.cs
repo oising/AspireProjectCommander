@@ -36,17 +36,22 @@ internal sealed class DataGeneratorWorker(IAspireProjectCommanderClient aspire, 
         {
             var period = TimeSpan.FromSeconds(1);
 
-            aspire.CommandReceived += (commandName, sp) =>
+            aspire.CommandReceived += (commandName, args, sp) =>
             {
                 switch (commandName)
                 {
                     case "slow":
                         period = TimeSpan.FromSeconds(1);
-                        logger.LogInformation("Slow command received");
+                        logger.LogInformation("Slow command received with args {Args}", string.Join(", ", args));
                         break;
                     case "fast":
                         period = TimeSpan.FromMilliseconds(10);
-                        logger.LogInformation("Fast command received");
+                        logger.LogInformation("Fast command received with args {Args}", string.Join(", ", args));
+                        break;
+                    case "specify":
+                        logger.LogInformation("Specify command received with args {Args}", string.Join(", ", args));
+                        period = TimeSpan.FromSeconds(int.Parse(args[0]));
+                        logger.LogInformation("Period was set to {Period}", period);
                         break;
                     default:
                         throw new NotSupportedException(commandName);

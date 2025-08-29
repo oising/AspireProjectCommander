@@ -14,7 +14,7 @@ namespace CommunityToolkit.Aspire.ProjectCommander
     internal sealed class AspireProjectCommanderClientWorker(IConfiguration configuration, IServiceProvider serviceProvider, ILogger<AspireProjectCommanderClientWorker> logger)
     : BackgroundService, IAspireProjectCommanderClient
     {
-        private readonly List<Func<string, IServiceProvider, Task>> _commandHandlers = new();
+        private readonly List<Func<string, string[], IServiceProvider, Task>> _commandHandlers = new();
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -34,16 +34,16 @@ namespace CommunityToolkit.Aspire.ProjectCommander
                     .Build();
 
                 // Wire up a command handler
-                hub.On<string>("ReceiveCommand", async (command) =>
+                hub.On<string, string[]>("ReceiveCommand", async (command, args) =>
                 {
-                    logger.LogDebug("Received command: {CommandName}", command);
+                    logger.LogDebug("Received command: {CommandName} {Args}", command, string.Join(", ", args));
 
                     // note: could be optimized to run in parallel
                     foreach (var handler in _commandHandlers)
                     {
                         try
                         {
-                            await handler(command, serviceProvider);
+                            await handler(command, args, serviceProvider);
                         }
                         catch (Exception ex)
                         {
@@ -68,7 +68,7 @@ namespace CommunityToolkit.Aspire.ProjectCommander
             }, stoppingToken);
         }
 
-        public event Func<string, IServiceProvider, Task> CommandReceived
+        public event Func<string, string[], IServiceProvider, Task> CommandReceived
         {
             add => _commandHandlers.Add(value);
             remove => _commandHandlers.Remove(value);
