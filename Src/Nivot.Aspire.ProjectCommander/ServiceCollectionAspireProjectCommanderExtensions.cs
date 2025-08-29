@@ -13,7 +13,7 @@ public static class ServiceCollectionAspireProjectCommanderExtensions
     /// Adds the Aspire Project Commander client to the service collection.
     /// </summary>
     /// <param name="services"></param>
-    /// <returns></returns>
+    /// <returns>Returns the updated service collection.</returns>
     public static IServiceCollection AddAspireProjectCommanderClient(this IServiceCollection services)
     {
         var sp = services.BuildServiceProvider();

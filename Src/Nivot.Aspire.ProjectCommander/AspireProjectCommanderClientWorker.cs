@@ -5,6 +5,12 @@ using Microsoft.Extensions.Logging;
 
 namespace CommunityToolkit.Aspire.ProjectCommander
 {
+    /// <summary>
+    /// Background service that connects to the Aspire Project Commander SignalR Hub and listens for commands.
+    /// </summary>
+    /// <param name="configuration"></param>
+    /// <param name="serviceProvider"></param>
+    /// <param name="logger"></param>
     internal sealed class AspireProjectCommanderClientWorker(IConfiguration configuration, IServiceProvider serviceProvider, ILogger<AspireProjectCommanderClientWorker> logger)
     : BackgroundService, IAspireProjectCommanderClient
     {
@@ -27,6 +33,7 @@ namespace CommunityToolkit.Aspire.ProjectCommander
                     .WithAutomaticReconnect()
                     .Build();
 
+                // Wire up a command handler
                 hub.On<string>("ReceiveCommand", async (command) =>
                 {
                     logger.LogDebug("Received command: {CommandName}", command);
@@ -40,7 +47,7 @@ namespace CommunityToolkit.Aspire.ProjectCommander
                         }
                         catch (Exception ex)
                         {
-                            logger.LogError(ex, "Error invocating handler for command: {CommandName}", command);
+                            logger.LogError(ex, "Error invoking handler for command: {CommandName}", command);
                         }
                     }
                 });
@@ -49,6 +56,7 @@ namespace CommunityToolkit.Aspire.ProjectCommander
 
                 logger.LogInformation("Connected to Aspire Project Commands Hub: Registering identity...");
 
+                // Grab my suffix from OTEL env vars so the AppHost signalr hub can correctly isolate this client (i.e. there may be replicas)
                 var aspireResourceName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME")!;
                 var aspireResourceSuffix = Environment.GetEnvironmentVariable("OTEL_RESOURCE_ATTRIBUTES")!.Split("=")[1];
                 

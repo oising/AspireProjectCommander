@@ -1,0 +1,43 @@
+sequenceDiagram
+    participant AppHost as Aspire AppHost
+    participant Hub as ProjectCommanderHub<br/>(SignalR Server)
+    participant DataGen as DataGenerator<br/>(AspireProjectCommanderClientWorker)
+    participant Worker as DataGeneratorWorker<br/>(BackgroundService)
+
+    Note over AppHost,Worker: Application Startup
+    AppHost->>Hub: Start SignalR Hub on localhost
+    Hub-->>AppHost: Hub started successfully
+    
+    DataGen->>Hub: Connect to SignalR Hub
+    Note over DataGen: Using connection string from<br/>'project-commander' config
+    
+    DataGen->>Hub: InvokeAsync("Identify", resourceName)
+    Note over DataGen: resourceName = "datagenerator-{suffix}"
+    Hub->>Hub: Groups.AddToGroupAsync(connectionId, resourceName)
+    Hub-->>DataGen: Connection established and grouped
+    
+    DataGen->>DataGen: Register "ReceiveCommand" handler
+    Note over DataGen: hub.On<string>("ReceiveCommand", handler)
+    
+    Note over AppHost,Worker: Command Execution Flow
+    AppHost->>AppHost: User clicks "Go Slow" or "Go Fast"<br/>in Aspire Dashboard
+    
+    AppHost->>Hub: Execute command via<br/>WithCommand callback
+    Note over AppHost: Resolves ProjectCommanderHubResource<br/>and gets IHubContext
+    
+    Hub->>DataGen: Clients.Group(resourceName)<br/>.SendAsync("ReceiveCommand", commandName)
+    Note over Hub: commandName = "slow" or "fast"
+    
+    DataGen->>DataGen: Trigger registered handler
+    DataGen->>Worker: Fire CommandReceived event<br/>with command name
+    
+    Worker->>Worker: Process command
+    alt Command is "slow"
+        Worker->>Worker: Set period = 1 second
+        Worker->>Worker: Log "Slow command received"
+    else Command is "fast"
+        Worker->>Worker: Set period = 10 milliseconds
+        Worker->>Worker: Log "Fast command received"
+    end
+    
+    Note over Worker: Worker continues data generation<br/>with new timing period

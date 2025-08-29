@@ -36,6 +36,7 @@ public static class ResourceBuilderProjectCommanderExtensions
             throw new ArgumentException("You must supply at least one command.");
         }
 
+        // Add command proxies to the dashboard
         foreach (var command in commands)
         {
             builder.WithCommand(command.Name, command.DisplayName, async (context) =>

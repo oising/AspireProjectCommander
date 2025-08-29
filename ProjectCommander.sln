@@ -10,6 +10,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataGenerator", "Sample\DataGenerator\DataGenerator.csproj", "{C8B82394-D38B-490E-9BF9-3E66579C1EC3}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sample", "Sample", "{A12F2526-69A6-444C-82CA-49DAAB8D0C7E}"
+	ProjectSection(SolutionItems) = preProject
+		Sample\sequenceDiagram.mmd = Sample\sequenceDiagram.mmd
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectCommander.AppHost", "Sample\ProjectCommander.AppHost\ProjectCommander.AppHost.csproj", "{DECE34B3-8776-4684-A92F-8B9C8A1147A7}"
 EndProject
