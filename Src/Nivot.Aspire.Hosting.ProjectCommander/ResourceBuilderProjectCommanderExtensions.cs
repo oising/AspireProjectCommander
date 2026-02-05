@@ -74,6 +74,7 @@ public static class ResourceBuilderProjectCommanderExtensions
 
     /// <summary>
     /// Registers the startup form command for a resource with a startup form.
+    /// The command is disabled after successful submission and requires a resource restart to re-enable.
     /// </summary>
     private static void RegisterStartupFormCommand<T>(IResourceBuilder<T> builder, StartupFormAnnotation annotation)
         where T : ProjectResource
@@ -86,6 +87,16 @@ public static class ResourceBuilderProjectCommanderExtensions
             displayName: form.Title,
             executeCommand: async (context) =>
             {
+                // Check if the startup form has already been completed
+                if (annotation.IsCompleted)
+                {
+                    return new ExecuteCommandResult
+                    {
+                        Success = false,
+                        ErrorMessage = "Startup form has already been submitted. Restart the resource to configure again."
+                    };
+                }
+
                 try
                 {
                     var model = context.ServiceProvider.GetRequiredService<DistributedApplicationModel>();
@@ -132,7 +143,7 @@ public static class ResourceBuilderProjectCommanderExtensions
                         formData,
                         context.CancellationToken);
 
-                    // Update annotation
+                    // Update annotation to mark as completed
                     annotation.FormData = formData;
                     annotation.IsCompleted = true;
 
@@ -151,7 +162,11 @@ public static class ResourceBuilderProjectCommanderExtensions
             {
                 IconName = "Settings",
                 IconVariant = IconVariant.Regular,
-                IsHighlighted = true
+                IsHighlighted = true,
+                // Dynamically update command state based on whether form is completed
+                UpdateState = (context) => annotation.IsCompleted
+                    ? ResourceCommandState.Disabled
+                    : ResourceCommandState.Enabled
             });
     }
 
