@@ -19,6 +19,8 @@ await app.RunAsync();
 
 internal sealed class DataGeneratorWorker(IAspireProjectCommanderClient aspire, EventHubProducerClient producer, ILogger<DataGeneratorWorker> logger) : BackgroundService
 {
+    private bool _isPaused;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var json = """
@@ -32,10 +34,28 @@ internal sealed class DataGeneratorWorker(IAspireProjectCommanderClient aspire, 
 """;
         logger.LogInformation("Data generator worker started");
 
+        // Wait for startup form to be completed (if required)
+        var startupConfig = await aspire.WaitForStartupFormAsync(stoppingToken);
+
+        // Apply startup configuration
+        var period = TimeSpan.FromSeconds(1);
+        if (startupConfig != null)
+        {
+            if (startupConfig.TryGetValue("initialDelay", out var delayStr) && int.TryParse(delayStr, out var delay))
+            {
+                period = TimeSpan.FromSeconds(delay);
+                logger.LogInformation("Initial delay set to {Delay} seconds from startup form", delay);
+            }
+
+            if (startupConfig.TryGetValue("mode", out var mode))
+            {
+                logger.LogInformation("Generation mode set to: {Mode}", mode);
+                _isPaused = mode == "On Demand";
+            }
+        }
+
         await Task.Run(async () =>
         {
-            var period = TimeSpan.FromSeconds(1);
-
             aspire.CommandReceived += (commandName, args, sp) =>
             {
                 switch (commandName)
@@ -53,8 +73,17 @@ internal sealed class DataGeneratorWorker(IAspireProjectCommanderClient aspire, 
                         period = TimeSpan.FromSeconds(int.Parse(args[0]));
                         logger.LogInformation("Period was set to {Period}", period);
                         break;
+                    case "pause":
+                        _isPaused = true;
+                        logger.LogInformation("Data generation paused");
+                        break;
+                    case "resume":
+                        _isPaused = false;
+                        logger.LogInformation("Data generation resumed");
+                        break;
                     default:
-                        throw new NotSupportedException(commandName);
+                        logger.LogWarning("Unknown command received: {CommandName}", commandName);
+                        break;
                 }
 
                 return Task.CompletedTask;
@@ -65,9 +94,12 @@ internal sealed class DataGeneratorWorker(IAspireProjectCommanderClient aspire, 
             {
                 await Task.Delay(period, stoppingToken);
 
-                await producer.SendAsync([
-                    new EventData(
-                        Encoding.UTF8.GetBytes(json))], stoppingToken);
+                if (!_isPaused)
+                {
+                    await producer.SendAsync([
+                        new EventData(
+                            Encoding.UTF8.GetBytes(json))], stoppingToken);
+                }
             }
         }, stoppingToken);
 

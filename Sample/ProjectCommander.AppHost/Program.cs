@@ -21,11 +21,7 @@ builder.AddProject<Projects.DataGenerator>("datagenerator")
     .WithReference(commander)
     .WaitFor(commander)
     .WaitFor(datahub)
-    .WithProjectCommands(
-        new("slow", "Go Slow"),
-        new("fast", "Go Fast"),
-        new ("specify", "Specify Delay\u2026", // ... with ellipsis
-            new InteractionInput { Name = "delay", Label = "period", InputType = InputType.Number }));
+    .WithProjectManifest(); // Reads commands and startup form from projectcommander.json
 
 builder.AddProject<Projects.Consumer>("consumer")
     .WithReference(commander)

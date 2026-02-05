@@ -1,0 +1,66 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oising/AspireProjectCommander/main/schemas/projectcommander-v1.schema.json",
+  "version": "1.0",
+  "startupForm": {
+    "title": "Configure Data Generator",
+    "description": "Please configure the data generator settings before starting.",
+    "inputs": [
+      {
+        "name": "initialDelay",
+        "label": "Initial Delay (seconds)",
+        "description": "The delay between generated events at startup",
+        "inputType": "Number",
+        "required": true,
+        "placeholder": "1"
+      },
+      {
+        "name": "mode",
+        "label": "Generation Mode",
+        "description": "Select how data should be generated",
+        "inputType": "Choice",
+        "required": true,
+        "options": ["Continuous", "Burst", "On Demand"]
+      }
+    ]
+  },
+  "commands": [
+    {
+      "name": "slow",
+      "displayName": "Go Slow",
+      "description": "Set generation rate to slow (1 event per second)",
+      "iconName": "Clock"
+    },
+    {
+      "name": "fast",
+      "displayName": "Go Fast",
+      "description": "Set generation rate to fast (100 events per second)",
+      "iconName": "FastForward"
+    },
+    {
+      "name": "specify",
+      "displayName": "Specify Delay\u2026",
+      "description": "Set a custom delay between generated events",
+      "iconName": "Timer",
+      "inputs": [
+        {
+          "name": "delay",
+          "label": "Delay (seconds)",
+          "inputType": "Number",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "pause",
+      "displayName": "Pause",
+      "description": "Pause data generation",
+      "iconName": "Pause"
+    },
+    {
+      "name": "resume",
+      "displayName": "Resume",
+      "description": "Resume data generation",
+      "iconName": "Play"
+    }
+  ]
+}

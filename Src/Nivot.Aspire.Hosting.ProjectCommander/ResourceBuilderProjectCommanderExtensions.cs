@@ -22,6 +22,160 @@ public record ProjectCommand(string Name, string DisplayName, params Interaction
 public static class ResourceBuilderProjectCommanderExtensions
 {
     /// <summary>
+    /// Registers project commands from a projectcommander.json manifest file located in the project directory.
+    /// If no manifest file exists, no commands are registered.
+    /// This method can be combined with <see cref="WithProjectCommands{T}"/> to add additional commands.
+    /// </summary>
+    /// <typeparam name="T">The type of project resource.</typeparam>
+    /// <param name="builder">The resource builder.</param>
+    /// <returns>The resource builder for chaining.</returns>
+    public static IResourceBuilder<T> WithProjectManifest<T>(this IResourceBuilder<T> builder)
+        where T : ProjectResource
+    {
+        var projectPath = GetProjectDirectory(builder.Resource);
+
+        var manifest = ManifestReader.ReadManifest(projectPath);
+
+        if (manifest == null)
+        {
+            // No manifest found, nothing to register
+            return builder;
+        }
+
+        // Store startup form in annotation if present and register the configure command
+        if (manifest.StartupForm != null)
+        {
+            var startupFormAnnotation = new StartupFormAnnotation(manifest.StartupForm);
+            builder.WithAnnotation(startupFormAnnotation);
+
+            // Add environment variable so the client knows it needs to wait for startup form
+            builder.WithEnvironment("PROJECTCOMMANDER_STARTUP_FORM_REQUIRED", "true");
+
+            // Add a "Configure" command to trigger the startup form prompt
+            RegisterStartupFormCommand(builder, startupFormAnnotation);
+        }
+
+        // Register commands from manifest
+        if (manifest.Commands.Count > 0)
+        {
+            var projectCommands = manifest.Commands
+                .Select(c => new ProjectCommand(
+                    c.Name,
+                    c.DisplayName,
+                    c.Inputs.Select(ManifestReader.ToInteractionInput).ToArray()))
+                .ToArray();
+
+            // Use the existing WithProjectCommands method to register
+            return builder.WithProjectCommands(projectCommands);
+        }
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Registers the startup form command for a resource with a startup form.
+    /// </summary>
+    private static void RegisterStartupFormCommand<T>(IResourceBuilder<T> builder, StartupFormAnnotation annotation)
+        where T : ProjectResource
+    {
+        var form = annotation.Form;
+        var inputs = form.Inputs.Select(ManifestReader.ToInteractionInput).ToArray();
+
+        builder.WithCommand(
+            name: "projectcommander-configure",
+            displayName: form.Title,
+            executeCommand: async (context) =>
+            {
+                try
+                {
+                    var model = context.ServiceProvider.GetRequiredService<DistributedApplicationModel>();
+                    var hubResource = model.Resources.OfType<ProjectCommanderHubResource>().SingleOrDefault();
+
+                    if (hubResource?.Hub == null)
+                    {
+                        return new ExecuteCommandResult
+                        {
+                            Success = false,
+                            ErrorMessage = "Project Commander hub is not running."
+                        };
+                    }
+
+                    var interaction = context.ServiceProvider.GetRequiredService<IInteractionService>();
+
+                    // Show the startup form prompt
+                    var result = await interaction.PromptInputsAsync(
+                        form.Title,
+                        form.Description ?? "Please configure the following settings:",
+                        inputs,
+                        cancellationToken: context.CancellationToken);
+
+                    if (result.Canceled)
+                    {
+                        return new ExecuteCommandResult
+                        {
+                            Success = true,
+                            ErrorMessage = "Configuration cancelled."
+                        };
+                    }
+
+                    // Build form data dictionary
+                    var formData = new Dictionary<string, string?>();
+                    for (var i = 0; i < inputs.Length; i++)
+                    {
+                        formData[inputs[i].Name] = result.Data[i].Value;
+                    }
+
+                    // Send form data to the project
+                    var groupName = context.ResourceName;
+                    await hubResource.Hub.Clients.Group(groupName).SendAsync(
+                        "ReceiveStartupForm",
+                        formData,
+                        context.CancellationToken);
+
+                    // Update annotation
+                    annotation.FormData = formData;
+                    annotation.IsCompleted = true;
+
+                    return new ExecuteCommandResult { Success = true };
+                }
+                catch (Exception ex)
+                {
+                    return new ExecuteCommandResult
+                    {
+                        Success = false,
+                        ErrorMessage = ex.Message
+                    };
+                }
+            },
+            new CommandOptions
+            {
+                IconName = "Settings",
+                IconVariant = IconVariant.Regular,
+                IsHighlighted = true
+            });
+    }
+
+    /// <summary>
+    /// Gets the project directory from a ProjectResource by reading its annotations.
+    /// </summary>
+    private static string GetProjectDirectory(ProjectResource resource)
+    {
+        // ProjectResource has IProjectMetadata annotation that contains the project path
+        var metadata = resource.Annotations.OfType<IProjectMetadata>().FirstOrDefault();
+
+        if (metadata == null)
+        {
+            throw new InvalidOperationException(
+                $"Resource '{resource.Name}' does not have project metadata. " +
+                "Ensure WithProjectManifest is called on a ProjectResource.");
+        }
+
+        return Path.GetDirectoryName(metadata.ProjectPath)
+            ?? throw new InvalidOperationException(
+                $"Could not determine project directory from path: {metadata.ProjectPath}");
+    }
+
+    /// <summary>
     /// Adds project commands to a project resource.
     /// </summary>
     /// <typeparam name="T"></typeparam>

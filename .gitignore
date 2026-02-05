@@ -3,6 +3,9 @@
 ##
 ## Get latest from `dotnet new gitignore`
 
+# claude agent detritus
+tmpclaude-*
+
 # dotenv files
 .env
 
