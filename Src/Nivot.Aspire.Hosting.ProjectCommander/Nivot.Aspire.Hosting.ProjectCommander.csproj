@@ -16,11 +16,11 @@
 	  </None>
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="Aspire.Hosting" Version="9.4.1" />
-		<PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.25">
+		<PackageReference Include="Aspire.Hosting" Version="13.1.0" />
+		<PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.39">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="JetBrains.Annotations" Version="2025.2.0" />
+		<PackageReference Include="JetBrains.Annotations" Version="2025.2.2" />
 	</ItemGroup>
 </Project>

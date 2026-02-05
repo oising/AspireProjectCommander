@@ -1,3 +1,4 @@
+using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.SignalR;
@@ -19,7 +20,7 @@ internal sealed class ProjectCommanderHub(ILogger logger, ResourceLoggerService 
     /// <param name="resourceName"></param>
     /// <returns></returns>
     [UsedImplicitly]
-    public async Task Identify([ResourceName] string resourceName)
+    public async Task Identify([ResourceName] string resourceName) //, ProjectCommand[]? commands = null)
     {
         logger.LogInformation("{ResourceName} connected to Aspire Project Commander Hub", resourceName);
 

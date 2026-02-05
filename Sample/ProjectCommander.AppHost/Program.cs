@@ -24,11 +24,12 @@ builder.AddProject<Projects.DataGenerator>("datagenerator")
     .WithProjectCommands(
         new("slow", "Go Slow"),
         new("fast", "Go Fast"),
-        new ProjectCommand("specify", "Specify Delay",
-            new InteractionInput { Label = "period", InputType = InputType.Number }));
+        new ("specify", "Specify Delay\u2026", // ... with ellipsis
+            new InteractionInput { Name = "delay", Label = "period", InputType = InputType.Number }));
 
 builder.AddProject<Projects.Consumer>("consumer")
     .WithReference(commander)
+    .WaitFor(commander)
     .WithReference(client)
     .WaitFor(datahub);
 

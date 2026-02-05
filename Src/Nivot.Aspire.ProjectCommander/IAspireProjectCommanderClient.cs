@@ -10,3 +10,22 @@ public interface IAspireProjectCommanderClient
     /// </summary>
     public event Func<string, string[], IServiceProvider, Task> CommandReceived;
 }
+
+/// <summary>
+/// Provides extension methods for registering commands with an Aspire project commander client.
+/// </summary>
+public static class AspireProjectCommanderClientExtensions
+{
+    /// <summary>
+    /// Registers a command with the specified name.
+    /// </summary>
+    /// <param name="client"></param>
+    /// <param name="commandName"></param>
+    /// <returns></returns>
+
+    public static IAspireProjectCommanderClient RegisterProjectCommand(this IAspireProjectCommanderClient client, string commandName)
+    {
+        return client;
+    }
+}
+
