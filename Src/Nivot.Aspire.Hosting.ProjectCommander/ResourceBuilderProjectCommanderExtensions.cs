@@ -124,7 +124,7 @@ public static class ResourceBuilderProjectCommanderExtensions
                     {
                         return new ExecuteCommandResult
                         {
-                            Success = true,
+                            Success = false,
                             ErrorMessage = "Configuration cancelled."
                         };
                     }
@@ -243,7 +243,7 @@ public static class ResourceBuilderProjectCommanderExtensions
 
                         if (result.Canceled)
                         {
-                            return new ExecuteCommandResult() { Success = true, ErrorMessage = "User cancelled command." };
+                            return new ExecuteCommandResult() { Success = false, ErrorMessage = "User cancelled command." };
                         }
 
                         var args = new string?[command.Arguments.Length];
