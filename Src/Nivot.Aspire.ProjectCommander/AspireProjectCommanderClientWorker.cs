@@ -10,32 +10,34 @@ namespace CommunityToolkit.Aspire.ProjectCommander
     /// </summary>
     /// <param name="configuration"></param>
     /// <param name="serviceProvider"></param>
+    /// <param name="startupFormService"></param>
     /// <param name="logger"></param>
-    internal sealed class AspireProjectCommanderClientWorker(IConfiguration configuration, IServiceProvider serviceProvider, ILogger<AspireProjectCommanderClientWorker> logger)
+    internal sealed class AspireProjectCommanderClientWorker(
+        IConfiguration configuration, 
+        IServiceProvider serviceProvider, 
+        IStartupFormService startupFormService,
+        ILogger<AspireProjectCommanderClientWorker> logger)
     : BackgroundService, IAspireProjectCommanderClient
     {
         private readonly List<Func<string, string[], IServiceProvider, Task>> _commandHandlers = new();
         private readonly List<Func<Dictionary<string, string?>, IServiceProvider, Task<bool>>> _startupFormHandlers = new();
-        private readonly TaskCompletionSource<Dictionary<string, string?>> _startupFormCompletionSource = new();
 
         private HubConnection? _hub;
         private string? _aspireResourceName;
-        private bool _isStartupFormRequired;
-        private bool _isStartupFormCompleted;
-        private Dictionary<string, string?>? _startupFormData;
 
         /// <inheritdoc />
-        public bool IsStartupFormRequired => _isStartupFormRequired;
+        public bool IsStartupFormRequired => startupFormService.IsStartupFormRequired;
 
         /// <inheritdoc />
-        public bool IsStartupFormCompleted => _isStartupFormCompleted;
+        public bool IsStartupFormCompleted => startupFormService.IsStartupFormCompleted;
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             await Task.Run(async () =>
             {
                 // Check if startup form is required via environment variable
-                _isStartupFormRequired = Environment.GetEnvironmentVariable("PROJECTCOMMANDER_STARTUP_FORM_REQUIRED") == "true";
+                var isRequired = Environment.GetEnvironmentVariable("PROJECTCOMMANDER_STARTUP_FORM_REQUIRED") == "true";
+                startupFormService.SetStartupFormRequired(isRequired);
 
                 var connectionString = configuration.GetConnectionString("project-commander");
 
@@ -108,9 +110,7 @@ namespace CommunityToolkit.Aspire.ProjectCommander
 
                     if (success)
                     {
-                        _isStartupFormCompleted = true;
-                        _startupFormData = formData;
-                        _startupFormCompletionSource.TrySetResult(formData);
+                        startupFormService.CompleteStartupForm(formData);
                         logger.LogInformation("Startup form completed successfully");
                     }
                     else
@@ -123,7 +123,7 @@ namespace CommunityToolkit.Aspire.ProjectCommander
                 _hub.On<string>("StartupFormRequired", (title) =>
                 {
                     logger.LogInformation("Startup form required: {Title}", title);
-                    _isStartupFormRequired = true;
+                    startupFormService.SetStartupFormRequired(true);
                 });
 
                 await _hub.StartAsync(stoppingToken);
@@ -168,36 +168,7 @@ namespace CommunityToolkit.Aspire.ProjectCommander
         /// <inheritdoc />
         public async Task<Dictionary<string, string?>?> WaitForStartupFormAsync(CancellationToken cancellationToken = default)
         {
-            // If no startup form is required, return immediately
-            if (!_isStartupFormRequired)
-            {
-                logger.LogDebug("No startup form required, continuing immediately");
-                return null;
-            }
-
-            // If already completed, return the data
-            if (_isStartupFormCompleted && _startupFormData != null)
-            {
-                return _startupFormData;
-            }
-
-            logger.LogInformation("Waiting for startup form to be completed...");
-
-            // Wait for the form to be completed
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-            var completedTask = await Task.WhenAny(
-                _startupFormCompletionSource.Task,
-                Task.Delay(Timeout.Infinite, cts.Token));
-
-            if (completedTask == _startupFormCompletionSource.Task)
-            {
-                return await _startupFormCompletionSource.Task;
-            }
-
-            // Cancelled
-            cancellationToken.ThrowIfCancellationRequested();
-            return null;
+            return await startupFormService.WaitForStartupFormAsync(cancellationToken);
         }
     }
 }

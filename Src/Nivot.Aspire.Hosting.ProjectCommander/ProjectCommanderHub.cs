@@ -12,7 +12,12 @@ namespace CommunityToolkit.Aspire.Hosting.ProjectCommander;
 /// <param name="logger"></param>
 /// <param name="loggerService"></param>
 /// <param name="model"></param>
-internal sealed class ProjectCommanderHub(ILogger logger, ResourceLoggerService loggerService, DistributedApplicationModel model) : Hub
+/// <param name="resourceNameParser"></param>
+internal sealed class ProjectCommanderHub(
+    ILogger logger, 
+    ResourceLoggerService loggerService, 
+    DistributedApplicationModel model,
+    IResourceNameParser resourceNameParser) : Hub
 {
     /// <summary>
     /// Identifies the connecting client by adding it to a group named after the resource.
@@ -28,7 +33,7 @@ internal sealed class ProjectCommanderHub(ILogger logger, ResourceLoggerService 
         await Groups.AddToGroupAsync(Context.ConnectionId, resourceName);
 
         // Check if this resource has a startup form and notify the client
-        var baseResourceName = resourceName.Split('-')[0];
+        var baseResourceName = resourceNameParser.GetBaseResourceName(resourceName);
         var resource = model.Resources.FirstOrDefault(r => r.Name == baseResourceName);
 
         if (resource != null)
@@ -55,7 +60,7 @@ internal sealed class ProjectCommanderHub(ILogger logger, ResourceLoggerService 
         logger.LogInformation("{ResourceName} startup form completed: Success={Success}", resourceName, success);
 
         // Find the resource and update the annotation
-        var baseResourceName = resourceName.Split('-')[0];
+        var baseResourceName = resourceNameParser.GetBaseResourceName(resourceName);
         var resource = model.Resources.FirstOrDefault(r => r.Name == baseResourceName);
 
         if (resource != null)
