@@ -50,6 +50,9 @@ public sealed class ProjectCommanderHubResource(ProjectCommanderHubOptions optio
         // proxy logging to AppHost logger
         host.Services.AddSingleton(_logger);
 
+        // Add resource name parser service
+        host.Services.AddSingleton<IResourceNameParser, ResourceNameParser>();
+
         host.WebHost.UseUrls($"{(options.UseHttps ? "https" : "http")}://localhost:{options.HubPort}");
 
         host.Services.AddSignalR()

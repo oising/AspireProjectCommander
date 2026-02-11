@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectCommander.Tests", "P
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpiraLog", "Sample\SpiraLog\SpiraLog.csproj", "{D45D1DF8-C846-1C71-D6DD-AC07B173733A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectCommander.UnitTests", "ProjectCommander.UnitTests\ProjectCommander.UnitTests.csproj", "{CCFE1630-B697-45E9-9124-6B18AD3FAC4A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -67,6 +69,10 @@ Global
 		{D45D1DF8-C846-1C71-D6DD-AC07B173733A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D45D1DF8-C846-1C71-D6DD-AC07B173733A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D45D1DF8-C846-1C71-D6DD-AC07B173733A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CCFE1630-B697-45E9-9124-6B18AD3FAC4A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CCFE1630-B697-45E9-9124-6B18AD3FAC4A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CCFE1630-B697-45E9-9124-6B18AD3FAC4A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CCFE1630-B697-45E9-9124-6B18AD3FAC4A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

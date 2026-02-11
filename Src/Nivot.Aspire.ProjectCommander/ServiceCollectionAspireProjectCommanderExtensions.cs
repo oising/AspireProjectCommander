@@ -25,6 +25,7 @@ public static class ServiceCollectionAspireProjectCommanderExtensions
         //     services.AddSingleton<IAspireProjectCommanderClient>(worker);
         // }
 
+        services.AddSingleton<IStartupFormService, StartupFormService>();
         services.AddSingleton<AspireProjectCommanderClientWorker>();
         services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<AspireProjectCommanderClientWorker>());
         services.AddSingleton<IAspireProjectCommanderClient>(sp => sp.GetRequiredService<AspireProjectCommanderClientWorker>());
