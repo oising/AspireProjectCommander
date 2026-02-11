@@ -212,21 +212,6 @@ public static class ResourceBuilderProjectCommanderExtensions
         {
             builder.WithCommand(command.Name, command.DisplayName, async (context) =>
             {
-                // Thank you LLMs for the idea, but
-                // // DO NOT DO THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                // // it might work in simple cases, but it will fail in complex ones
-                // // trust me, I've tried
-                // // and this is what LLMs are good for, telling you what NOT to do
-                // // because you are all wondering what the heck I'm talking about
-                // // lets run this and see what happens
-                // // because I know you are all thinking it
-                // // and I don't want to hear it
-                // i++;
-                // builder.WithCommand($"dynamic-command-{i}", command.DisplayName, async (context) =>
-                // {
-                //     return new ExecuteCommandResult() { Success = true };
-                // },
-                // new CommandOptions { });
 
                 bool success = false;
                 string errorMessage = string.Empty;

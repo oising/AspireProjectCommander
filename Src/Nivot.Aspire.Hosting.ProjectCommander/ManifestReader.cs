@@ -37,7 +37,14 @@ internal static class ManifestReader
         }
 
         var json = File.ReadAllText(manifestPath);
-        return JsonSerializer.Deserialize<ProjectCommandManifest>(json, JsonOptions);
+        var manifest = JsonSerializer.Deserialize<ProjectCommandManifest>(json, JsonOptions);
+
+        if (manifest is null)
+        {
+            throw new JsonException($"Failed to deserialize project command manifest from '{manifestPath}'.");
+        }
+
+        return manifest;
     }
 
     /// <summary>

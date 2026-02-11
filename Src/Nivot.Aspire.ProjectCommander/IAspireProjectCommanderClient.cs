@@ -43,9 +43,9 @@ public static class AspireProjectCommanderClientExtensions
     /// <summary>
     /// Registers a command with the specified name.
     /// </summary>
-    /// <param name="client"></param>
-    /// <param name="commandName"></param>
-    /// <returns></returns>
+    /// <param name="client">The project commander client to register the command with.</param>
+    /// <param name="commandName">The unique name that identifies the command to be registered.</param>
+    /// <returns>The same <see cref="IAspireProjectCommanderClient"/> instance, to allow fluent configuration.</returns>
 
     public static IAspireProjectCommanderClient RegisterProjectCommand(this IAspireProjectCommanderClient client, string commandName)
     {

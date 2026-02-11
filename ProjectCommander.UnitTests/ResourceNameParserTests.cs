@@ -14,9 +14,9 @@ public class ResourceNameParserTests
     [Theory]
     [InlineData("datagenerator-abc123", "datagenerator")]
     [InlineData("consumer-xyz789", "consumer")]
-    [InlineData("my-service-12345", "my")]
+    [InlineData("my-service-12345", "my-service")]
     [InlineData("singlename", "singlename")]
-    [InlineData("resource-with-multiple-hyphens-123", "resource")]
+    [InlineData("resource-with-multiple-hyphens-123", "resource-with-multiple-hyphens")]
     public void GetBaseResourceName_ParsesCorrectly(string input, string expected)
     {
         // Act
