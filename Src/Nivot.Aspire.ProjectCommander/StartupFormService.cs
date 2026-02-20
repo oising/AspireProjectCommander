@@ -10,9 +10,9 @@ internal sealed class StartupFormService : IStartupFormService
     private readonly ILogger<StartupFormService> _logger;
     private readonly TaskCompletionSource<Dictionary<string, string?>> _completionSource = new();
     
-    private bool _isStartupFormRequired;
-    private bool _isStartupFormCompleted;
-    private Dictionary<string, string?>? _startupFormData;
+    private volatile bool _isStartupFormRequired;
+    private volatile bool _isStartupFormCompleted;
+    private volatile Dictionary<string, string?>? _startupFormData;
 
     public StartupFormService(ILogger<StartupFormService> logger)
     {
@@ -38,8 +38,8 @@ internal sealed class StartupFormService : IStartupFormService
             throw new ArgumentNullException(nameof(formData));
         }
 
-        _isStartupFormCompleted = true;
         _startupFormData = formData;
+        _isStartupFormCompleted = true;
         _completionSource.TrySetResult(formData);
         _logger.LogInformation("Startup form completed with {Count} fields", formData.Count);
     }
