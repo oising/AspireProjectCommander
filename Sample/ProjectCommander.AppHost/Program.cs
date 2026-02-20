@@ -29,6 +29,7 @@ if (datageneratorConfig is not null)
 {
     datageneratorConfig.WithStartupFormBehavior();
     datagenerator.WaitFor(datageneratorConfig);
+    datageneratorConfig.WithParentRelationship(datagenerator);
 }
 
 builder.AddProject<Projects.Consumer>("consumer")

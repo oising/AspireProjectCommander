@@ -2,6 +2,7 @@
 
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Eventing;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -116,6 +117,25 @@ public static class DistributedApplicationBuilderExtensions
         var form = formResource.Form;
         var inputs = form.Inputs.Select(ManifestReader.ToInteractionInput).ToArray();
 
+        // Subscribe to InitializeResourceEvent to participate in Aspire's lifecycle.
+        // This is required for WaitFor to work correctly with custom resources.
+        // We don't transition to Running here - we stay in WaitingForConfiguration
+        // until the user completes the form.
+        builder.ApplicationBuilder.Eventing.Subscribe<InitializeResourceEvent>(formResource, async (e, ct) =>
+        {
+            var notify = e.Services.GetRequiredService<ResourceNotificationService>();
+            var logger = e.Services.GetRequiredService<ResourceLoggerService>().GetLogger(formResource);
+
+            logger.LogInformation("Startup form '{FormTitle}' initialized - waiting for user configuration", form.Title);
+
+            // Keep the resource in WaitingForConfiguration state
+            // The state was already set via WithInitialState, but we update the timestamp
+            await notify.PublishUpdateAsync(formResource, state => state with
+            {
+                CreationTimeStamp = DateTime.Now
+            });
+        });
+
         // Register the "Configure" command on the startup form resource
         builder.WithCommand(
             name: "projectcommander-configure",
@@ -186,15 +206,39 @@ public static class DistributedApplicationBuilderExtensions
                         formData,
                         context.CancellationToken);
 
-                    // Transition the startup form resource to Running state
+                    // Get the eventing service from the runtime service provider
+                    var eventing = context.ServiceProvider.GetRequiredService<IDistributedApplicationEventing>();
+
+                    // Publish BeforeResourceStartedEvent to signal we're about to start.
+                    // This is required for Aspire to properly track the resource lifecycle.
+                    await eventing.PublishAsync(
+                        new BeforeResourceStartedEvent(formResource, context.ServiceProvider),
+                        context.CancellationToken);
+
+                    // Transition the startup form resource to Running state.
                     var notify = context.ServiceProvider.GetRequiredService<ResourceNotificationService>();
                     await notify.PublishUpdateAsync(formResource, state => state with
                     {
                         State = KnownResourceStates.Running,
+                        StartTimeStamp = DateTime.Now,
                         Properties = [
                             .. state.Properties,
                             new("form.completedAt", DateTime.Now.ToString("O"))
                         ]
+                    });
+
+                    // For custom resources without a process (like StartupFormResource), we must manually
+                    // publish ResourceReadyEvent. Aspire's automatic ResourceReadyEvent publishing only
+                    // works for built-in resource types (Container, Project, Executable) that have
+                    // actual processes Aspire monitors. This is what unblocks WaitFor dependents.
+                    await eventing.PublishAsync(
+                        new ResourceReadyEvent(formResource, context.ServiceProvider),
+                        context.CancellationToken);
+
+                    // Now transition to Finished to indicate this is a completed one-time task
+                    await notify.PublishUpdateAsync(formResource, state => state with
+                    {
+                        State = KnownResourceStates.Finished
                     });
 
                     return new ExecuteCommandResult { Success = true };
