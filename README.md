@@ -215,7 +215,7 @@ var app = builder.Build();
 
 await app.RunAsync();
 ```
-![image](https://github.com/user-attachments/assets/c1eb70e7-410e-49e6-92ba-db66ae7be563)
+<img width="1129" height="238" alt="image" src="https://github.com/user-attachments/assets/daa12d5f-d678-4660-a155-ae8c6634ffff" />
 
 ### Project Integration
 
