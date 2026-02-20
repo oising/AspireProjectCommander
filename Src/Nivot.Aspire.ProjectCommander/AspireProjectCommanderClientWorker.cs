@@ -24,6 +24,7 @@ namespace CommunityToolkit.Aspire.ProjectCommander
 
         private HubConnection? _hub;
         private string? _aspireResourceName;
+        private string? _baseResourceName;
 
         /// <inheritdoc />
         public bool IsStartupFormRequired => startupFormService.IsStartupFormRequired;
@@ -69,9 +70,16 @@ namespace CommunityToolkit.Aspire.ProjectCommander
                     }
                 });
 
-                // Wire up startup form handler
-                _hub.On<Dictionary<string, string?>>("ReceiveStartupForm", async (formData) =>
+                // Wire up startup form handler - now includes resource name for filtering
+                _hub.On<string, Dictionary<string, string?>>("ReceiveStartupForm", async (resourceName, formData) =>
                 {
+                    // Only process if this message is for this project (or broadcast)
+                    if (resourceName != _baseResourceName && !string.IsNullOrEmpty(resourceName))
+                    {
+                        logger.LogDebug("Ignoring startup form for different resource: {ResourceName}", resourceName);
+                        return;
+                    }
+
                     logger.LogInformation("Received startup form data with {Count} fields", formData.Count);
 
                     bool success = true;
@@ -134,6 +142,7 @@ namespace CommunityToolkit.Aspire.ProjectCommander
                 var aspireServiceName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME")!;
                 var aspireResourceSuffix = Environment.GetEnvironmentVariable("OTEL_RESOURCE_ATTRIBUTES")!.Split("=")[1];
                 _aspireResourceName = $"{aspireServiceName}-{aspireResourceSuffix}";
+                _baseResourceName = aspireServiceName;
 
                 await _hub.InvokeAsync("Identify", _aspireResourceName, stoppingToken);
 

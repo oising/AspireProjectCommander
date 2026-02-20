@@ -14,7 +14,7 @@ This repo contains .NET Aspire libraries that enable custom project commands fro
 - Tests: ProjectCommander.Tests
 
 ## Target framework and SDK
-- Uses .NET SDK 9.0.100 (global.json).
+- Uses .NET SDK 10.0.100 (global.json).
 - Solutions: ProjectCommander.sln (primary), Packages.sln (packaging focus).
 
 ## Build, test, and run

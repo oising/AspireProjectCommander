@@ -102,15 +102,30 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var commander = builder.AddAspireProjectCommander();
 
-builder.AddProject<Projects.DataGenerator>("datagenerator")
+// WithProjectManifest returns a tuple: (project builder, optional startup form resource)
+var (datagenerator, datageneratorConfig) = builder.AddProject<Projects.DataGenerator>("datagenerator")
     .WithReference(commander)
     .WaitFor(commander)
-    .WithProjectManifest(); // Reads commands from projectcommander.json
+    .WithProjectManifest(); // Reads commands and startup form from projectcommander.json
+
+// If the project has a startup form, configure it and make the project wait for it
+if (datageneratorConfig is not null)
+{
+    datageneratorConfig.WithStartupFormBehavior();
+    datagenerator.WaitFor(datageneratorConfig); // Project won't start until form is completed
+}
 
 builder.Build().Run();
 ```
 
+The startup form appears as a separate resource in the Aspire dashboard with state `WaitingForConfiguration`. 
+The project is blocked by Aspire's `WaitFor` until the developer clicks "Configure" and submits the form, 
+at which point the form resource transitions to `Running` and the project starts.
+
 ### Handling Startup Forms in Projects
+
+When using the `WaitFor(startupFormResource)` pattern, Aspire blocks the project from starting until the form is completed. 
+Once the project starts, it can retrieve the form data using `WaitForStartupFormAsync()` which returns immediately with the cached values:
 
 ```csharp
 public sealed class DataGeneratorWorker(
@@ -119,7 +134,7 @@ public sealed class DataGeneratorWorker(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Wait for startup form to be completed (blocks until user submits)
+        // Get startup form data (returns immediately since form was already completed before project started)
         var config = await commander.WaitForStartupFormAsync(stoppingToken);
 
         if (config != null)

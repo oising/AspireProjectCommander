@@ -23,36 +23,57 @@ public static class ResourceBuilderProjectCommanderExtensions
 {
     /// <summary>
     /// Registers project commands from a projectcommander.json manifest file located in the project directory.
-    /// If no manifest file exists, no commands are registered.
-    /// This method can be combined with <see cref="WithProjectCommands{T}"/> to add additional commands.
+    /// If the manifest defines a startup form, a <see cref="StartupFormResource"/> is created that the project
+    /// can wait on using <see cref="ResourceBuilderExtensions.WaitFor{T}(IResourceBuilder{T}, IResourceBuilder{IResource})"/>.
     /// </summary>
     /// <typeparam name="T">The type of project resource.</typeparam>
     /// <param name="builder">The resource builder.</param>
-    /// <returns>The resource builder for chaining.</returns>
-    public static IResourceBuilder<T> WithProjectManifest<T>(this IResourceBuilder<T> builder)
+    /// <returns>
+    /// A tuple containing the project resource builder and an optional startup form resource builder.
+    /// The startup form resource is null if no startup form is defined in the manifest.
+    /// </returns>
+    public static (IResourceBuilder<T> Project, IResourceBuilder<StartupFormResource>? StartupForm) WithProjectManifest<T>(
+        this IResourceBuilder<T> builder)
         where T : ProjectResource
     {
         var projectPath = GetProjectDirectory(builder.Resource);
-
         var manifest = ManifestReader.ReadManifest(projectPath);
 
         if (manifest == null)
         {
             // No manifest found, nothing to register
-            return builder;
+            return (builder, null);
         }
 
-        // Store startup form in annotation if present and register the configure command
+        IResourceBuilder<StartupFormResource>? startupFormBuilder = null;
+
+        // Create startup form resource if present
         if (manifest.StartupForm != null)
         {
-            var startupFormAnnotation = new StartupFormAnnotation(manifest.StartupForm);
-            builder.WithAnnotation(startupFormAnnotation);
+            var startupFormResource = new StartupFormResource(
+                $"{builder.Resource.Name}-config",
+                manifest.StartupForm,
+                builder.Resource);
+
+            // Add annotation to link parent project to startup form resource
+            builder.WithAnnotation(new StartupFormResourceAnnotation(startupFormResource));
 
             // Add environment variable so the client knows it needs to wait for startup form
             builder.WithEnvironment("PROJECTCOMMANDER_STARTUP_FORM_REQUIRED", "true");
 
-            // Add a "Configure" command to trigger the startup form prompt
-            RegisterStartupFormCommand(builder, startupFormAnnotation);
+            // Add the startup form resource to the application model
+            startupFormBuilder = builder.ApplicationBuilder.AddResource(startupFormResource)
+                .WithInitialState(new CustomResourceSnapshot
+                {
+                    ResourceType = "StartupForm",
+                    State = StartupFormResource.WaitingForConfigurationState,
+                    Properties = [
+                        new(CustomResourceKnownProperties.Source, $"Startup form for {builder.Resource.Name}"),
+                        new("form.title", manifest.StartupForm.Title),
+                        new("form.inputCount", manifest.StartupForm.Inputs.Count.ToString())
+                    ]
+                })
+                .ExcludeFromManifest();
         }
 
         // Register commands from manifest
@@ -66,108 +87,10 @@ public static class ResourceBuilderProjectCommanderExtensions
                 .ToArray();
 
             // Use the existing WithProjectCommands method to register
-            return builder.WithProjectCommands(projectCommands);
+            builder.WithProjectCommands(projectCommands);
         }
 
-        return builder;
-    }
-
-    /// <summary>
-    /// Registers the startup form command for a resource with a startup form.
-    /// The command is disabled after successful submission and requires a resource restart to re-enable.
-    /// </summary>
-    private static void RegisterStartupFormCommand<T>(IResourceBuilder<T> builder, StartupFormAnnotation annotation)
-        where T : ProjectResource
-    {
-        var form = annotation.Form;
-        var inputs = form.Inputs.Select(ManifestReader.ToInteractionInput).ToArray();
-
-        builder.WithCommand(
-            name: "projectcommander-configure",
-            displayName: form.Title,
-            executeCommand: async (context) =>
-            {
-                // Check if the startup form has already been completed
-                if (annotation.IsCompleted)
-                {
-                    return new ExecuteCommandResult
-                    {
-                        Success = false,
-                        ErrorMessage = "Startup form has already been submitted. Restart the resource to configure again."
-                    };
-                }
-
-                try
-                {
-                    var model = context.ServiceProvider.GetRequiredService<DistributedApplicationModel>();
-                    var hubResource = model.Resources.OfType<ProjectCommanderHubResource>().SingleOrDefault();
-
-                    if (hubResource?.Hub == null)
-                    {
-                        return new ExecuteCommandResult
-                        {
-                            Success = false,
-                            ErrorMessage = "Project Commander hub is not running."
-                        };
-                    }
-
-                    var interaction = context.ServiceProvider.GetRequiredService<IInteractionService>();
-
-                    // Show the startup form prompt
-                    var result = await interaction.PromptInputsAsync(
-                        form.Title,
-                        form.Description ?? "Please configure the following settings:",
-                        inputs,
-                        cancellationToken: context.CancellationToken);
-
-                    if (result.Canceled)
-                    {
-                        return new ExecuteCommandResult
-                        {
-                            Success = false,
-                            ErrorMessage = "Configuration cancelled."
-                        };
-                    }
-
-                    // Build form data dictionary
-                    var formData = new Dictionary<string, string?>();
-                    for (var i = 0; i < inputs.Length; i++)
-                    {
-                        formData[inputs[i].Name] = result.Data[i].Value;
-                    }
-
-                    // Send form data to the project
-                    var groupName = context.ResourceName;
-                    await hubResource.Hub.Clients.Group(groupName).SendAsync(
-                        "ReceiveStartupForm",
-                        formData,
-                        context.CancellationToken);
-
-                    // Update annotation to mark as completed
-                    annotation.FormData = formData;
-                    annotation.IsCompleted = true;
-
-                    return new ExecuteCommandResult { Success = true };
-                }
-                catch (Exception ex)
-                {
-                    return new ExecuteCommandResult
-                    {
-                        Success = false,
-                        ErrorMessage = ex.Message
-                    };
-                }
-            },
-            new CommandOptions
-            {
-                IconName = "Settings",
-                IconVariant = IconVariant.Regular,
-                IsHighlighted = true,
-                // Dynamically update command state based on whether form is completed
-                UpdateState = (context) => annotation.IsCompleted
-                    ? ResourceCommandState.Disabled
-                    : ResourceCommandState.Enabled
-            });
+        return (builder, startupFormBuilder);
     }
 
     /// <summary>

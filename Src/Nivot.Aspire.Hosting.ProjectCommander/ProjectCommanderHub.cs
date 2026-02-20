@@ -32,18 +32,28 @@ internal sealed class ProjectCommanderHub(
 
         await Groups.AddToGroupAsync(Context.ConnectionId, resourceName);
 
-        // Check if this resource has a startup form and notify the client
+        // Check if this resource has a startup form resource and notify the client
         var baseResourceName = resourceNameParser.GetBaseResourceName(resourceName);
         var resource = model.Resources.FirstOrDefault(r => r.Name == baseResourceName);
 
         if (resource != null)
         {
-            var startupFormAnnotation = resource.Annotations.OfType<StartupFormAnnotation>().FirstOrDefault();
-            if (startupFormAnnotation != null && !startupFormAnnotation.IsCompleted)
+            var startupFormAnnotation = resource.Annotations.OfType<StartupFormResourceAnnotation>().FirstOrDefault();
+            if (startupFormAnnotation != null && !startupFormAnnotation.StartupFormResource.IsCompleted)
             {
                 // Notify client that a startup form is required
-                await Clients.Caller.SendAsync("StartupFormRequired", startupFormAnnotation.Form.Title);
-                logger.LogInformation("{ResourceName} requires startup form: {Title}", resourceName, startupFormAnnotation.Form.Title);
+                var form = startupFormAnnotation.StartupFormResource.Form;
+                await Clients.Caller.SendAsync("StartupFormRequired", form.Title);
+                logger.LogInformation("{ResourceName} requires startup form: {Title}", resourceName, form.Title);
+            }
+            else if (startupFormAnnotation != null && startupFormAnnotation.StartupFormResource.IsCompleted)
+            {
+                // Form already completed, send the data to the newly connected client
+                logger.LogInformation("{ResourceName} startup form already completed, sending cached data", resourceName);
+                await Clients.Caller.SendAsync(
+                    "ReceiveStartupForm", 
+                    baseResourceName, 
+                    startupFormAnnotation.StartupFormResource.FormData);
             }
         }
     }
@@ -59,17 +69,20 @@ internal sealed class ProjectCommanderHub(
     {
         logger.LogInformation("{ResourceName} startup form completed: Success={Success}", resourceName, success);
 
-        // Find the resource and update the annotation
+        // Find the resource and update the StartupFormResource
         var baseResourceName = resourceNameParser.GetBaseResourceName(resourceName);
         var resource = model.Resources.FirstOrDefault(r => r.Name == baseResourceName);
 
         if (resource != null)
         {
-            var annotation = resource.Annotations.OfType<StartupFormAnnotation>().FirstOrDefault();
+            var annotation = resource.Annotations.OfType<StartupFormResourceAnnotation>().FirstOrDefault();
             if (annotation != null)
             {
-                annotation.IsCompleted = success;
-                annotation.ErrorMessage = success ? null : errorMessage;
+                // Note: The StartupFormResource state is managed by the command handler in
+                // DistributedApplicationBuilderExtensions.WithStartupFormBehavior()
+                // This callback is mainly for logging and notifying other clients
+                logger.LogDebug("StartupFormResource '{FormName}' completion acknowledged", 
+                    annotation.StartupFormResource.Name);
             }
         }
 

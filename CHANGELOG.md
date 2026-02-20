@@ -15,27 +15,50 @@ Projects can now define their own commands using a `projectcommander.json` manif
 
 **New extension method:**
 - `WithProjectManifest<T>()` - Reads commands and startup forms from the project's `projectcommander.json` file
+  - **Breaking change:** Now returns `(IResourceBuilder<T>, IResourceBuilder<StartupFormResource>?)` tuple
 
 **Manifest features:**
 - Define commands with name, display name, description, and icon
 - Specify interactive inputs for commands (Text, SecretText, Choice, Boolean, Number)
 - Define startup forms that must be completed before the project starts
 
-#### Startup Forms
+#### Startup Form Resource
 
-Projects can now require configuration before starting their main work via interactive startup forms.
+Startup forms are now represented as first-class Aspire resources. This enables using Aspire's native `WaitFor` semantics to block projects until configuration is complete.
 
-**New client interface members:**
-- `WaitForStartupFormAsync(CancellationToken)` - Blocks until the startup form is completed by the user
-- `IsStartupFormRequired` - Indicates if a startup form is configured for this project
-- `IsStartupFormCompleted` - Indicates if the startup form has been submitted
-- `StartupFormReceived` event - Fires when startup form data is received
+**New types:**
+- `StartupFormResource` - Custom Aspire resource representing a startup form
+- `StartupFormResourceAnnotation` - Links a project to its startup form resource
+
+**New extension method:**
+- `WithStartupFormBehavior()` - Configures the startup form resource with the "Configure" command
 
 **How it works:**
 1. Define a `startupForm` section in your `projectcommander.json`
-2. Call `await commander.WaitForStartupFormAsync()` in your project's startup
-3. The project waits for the user to click the Configure command in the dashboard
-4. Once submitted, the form data is returned and the project continues
+2. Call `WithProjectManifest()` which returns a tuple with the optional `StartupFormResource`
+3. Call `WithStartupFormBehavior()` on the form resource to register the Configure command
+4. Use `WaitFor(startupFormResource)` to block the project until the form is completed
+5. The form resource appears in the dashboard with state `WaitingForConfiguration`
+6. When the user submits the form, the resource transitions to `Running` and the project starts
+
+**Example:**
+```csharp
+var (datagenerator, datageneratorConfig) = builder.AddProject<Projects.DataGenerator>("datagenerator")
+    .WithReference(commander)
+    .WaitFor(commander)
+    .WithProjectManifest();
+
+if (datageneratorConfig is not null)
+{
+    datageneratorConfig.WithStartupFormBehavior();
+    datagenerator.WaitFor(datageneratorConfig);
+}
+```
+
+**Client-side:**
+- `WaitForStartupFormAsync()` still works but returns immediately with cached data since Aspire handles blocking
+- `IsStartupFormRequired` / `IsStartupFormCompleted` - Query form state
+- `StartupFormReceived` event - Fires when form data is received
 
 #### Combining Manifest and Code Commands
 
@@ -47,16 +70,24 @@ You can now use both `WithProjectManifest()` and `WithProjectCommands()` togethe
 |------|---------|
 | `ProjectCommandManifest.cs` | Manifest types for deserializing `projectcommander.json` |
 | `ManifestReader.cs` | JSON parser and InputDefinition to InteractionInput converter |
-| `StartupFormAnnotation.cs` | Resource annotation for tracking startup form state |
+| `StartupFormResource.cs` | Custom Aspire resource for startup forms |
+| `StartupFormResourceAnnotation.cs` | Links project to its startup form resource |
+
+### Removed Files
+
+| File | Reason |
+|------|--------|
+| `StartupFormAnnotation.cs` | Replaced by `StartupFormResource` and `StartupFormResourceAnnotation` |
 
 ### Modified Files
 
 | File | Changes |
 |------|---------|
-| `ResourceBuilderProjectCommanderExtensions.cs` | Added `WithProjectManifest()` and startup form command registration |
-| `ProjectCommanderHub.cs` | Added startup form lifecycle methods |
-| `IAspireProjectCommanderClient.cs` | Added startup form interface members |
-| `AspireProjectCommanderClientWorker.cs` | Implemented startup form handling |
+| `ResourceBuilderProjectCommanderExtensions.cs` | `WithProjectManifest()` now returns tuple with `StartupFormResource` |
+| `DistributedApplicationBuilderExtensions.cs` | Added `WithStartupFormBehavior()` extension |
+| `ProjectCommanderHub.cs` | Uses `StartupFormResourceAnnotation`, sends cached form data on connect |
+| `IAspireProjectCommanderClient.cs` | Startup form interface members |
+| `AspireProjectCommanderClientWorker.cs` | Handles new `ReceiveStartupForm` message format |
 
 ### Example Manifest
 

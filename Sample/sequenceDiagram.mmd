@@ -11,17 +11,37 @@ sequenceDiagram
     AppHost->>AppHost: Read projectcommander.json<br/>from project directory
 
     alt Manifest has StartupForm
-        AppHost->>AppHost: Create StartupFormAnnotation
+        AppHost->>AppHost: Create StartupFormResource<br/>(e.g., "datagenerator-config")
+        AppHost->>AppHost: Attach StartupFormResourceAnnotation<br/>to parent project
         AppHost->>AppHost: Set PROJECTCOMMANDER_STARTUP_FORM_REQUIRED=true
-        AppHost->>AppHost: Register "Configure" command
+        AppHost->>AppHost: Set resource state = "WaitingForConfiguration"
     end
 
     AppHost->>AppHost: Register commands from manifest<br/>via WithProjectCommands()
 
+    AppHost->>AppHost: WithStartupFormBehavior() called
+    AppHost->>AppHost: Register "Configure" command<br/>on StartupFormResource
+
     AppHost->>Hub: Start SignalR Hub on localhost:27960
     Hub-->>AppHost: Hub started successfully
 
-    Note over AppHost,Worker: Project Connection
+    Note over AppHost,Worker: Aspire WaitFor Semantics
+
+    AppHost->>AppHost: datagenerator.WaitFor(datageneratorConfig)
+    Note over AppHost: Project blocked until<br/>StartupFormResource is Running
+
+    Dashboard->>AppHost: User clicks "Configure" on<br/>datagenerator-config resource
+
+    AppHost->>Dashboard: IInteractionService.PromptInputsAsync()<br/>Show form with inputs
+    Dashboard-->>AppHost: User submits form data
+
+    AppHost->>AppHost: StartupFormResource.MarkCompleted(formData)
+    AppHost->>AppHost: PublishUpdateAsync(state = Running)
+    Note over AppHost: WaitFor unblocked -<br/>project can now start
+
+    AppHost->>Hub: hub.Clients.All.SendAsync<br/>("ReceiveStartupForm", resourceName, formData)
+
+    Note over AppHost,Worker: Project Connection (after WaitFor unblocks)
 
     DataGen->>DataGen: Check PROJECTCOMMANDER_STARTUP_FORM_REQUIRED env var
     DataGen->>Hub: Connect to SignalR Hub
@@ -31,34 +51,20 @@ sequenceDiagram
     Note over DataGen: resourceName = "datagenerator-{suffix}"
     Hub->>Hub: Groups.AddToGroupAsync(connectionId, resourceName)
 
-    alt Resource has StartupFormAnnotation
-        Hub->>DataGen: SendAsync("StartupFormRequired", title)
-        Note over DataGen: Client knows startup form is pending
+    alt StartupFormResource.IsCompleted
+        Hub->>DataGen: SendAsync("ReceiveStartupForm",<br/>resourceName, cachedFormData)
+        Note over DataGen: Hub sends cached form data<br/>to newly connected client
     end
 
     Hub-->>DataGen: Connection established and grouped
 
     DataGen->>DataGen: Register "ReceiveCommand" handler
     DataGen->>DataGen: Register "ReceiveStartupForm" handler
-    Note over DataGen: hub.On<string, string[]>("ReceiveCommand", handler)<br/>hub.On<Dictionary>("ReceiveStartupForm", handler)
+    Note over DataGen: hub.On<string, Dict>("ReceiveStartupForm", handler)
 
-    Note over AppHost,Worker: Startup Form Flow (if configured)
-
-    Worker->>DataGen: WaitForStartupFormAsync(cancellationToken)
-    Note over Worker: Worker blocks until<br/>startup form is completed
-
-    Dashboard->>AppHost: User clicks "Configure Data Generator"<br/>command in dashboard
-
-    AppHost->>Dashboard: IInteractionService.PromptInputsAsync()<br/>Show form with inputs
-    Dashboard-->>AppHost: User submits form data
-
-    AppHost->>Hub: hub.Clients.Group(resourceName)<br/>.SendAsync("ReceiveStartupForm", formData)
-
-    Hub->>DataGen: ReceiveStartupForm(formData)
+    DataGen->>DataGen: ReceiveStartupForm(resourceName, formData)
     DataGen->>DataGen: Invoke StartupFormReceived handlers
     DataGen->>Hub: InvokeAsync("StartupFormCompleted",<br/>resourceName, success)
-
-    DataGen->>Worker: Complete WaitForStartupFormAsync<br/>with form data dictionary
 
     Worker->>Worker: Apply startup configuration
     Note over Worker: Set initial delay, mode, etc.<br/>from form data
