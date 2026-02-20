@@ -14,8 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Projects can now define their own commands using a `projectcommander.json` manifest file placed in the project root directory. This enables projects to be self-describing and portable, without requiring command definitions in the AppHost.
 
 **New extension method:**
-- `WithProjectManifest<T>()` - Reads commands and startup forms from the project's `projectcommander.json` file
-  - **Breaking change:** Now returns `(IResourceBuilder<T>, IResourceBuilder<StartupFormResource>?)` tuple
+- `WithProjectManifest<T>()` - Reads commands and startup forms from the project's `projectcommander.json` file; returns `IResourceBuilder<T>` for chaining
 
 **Manifest features:**
 - Define commands with name, display name, description, and icon
@@ -35,24 +34,16 @@ Startup forms are now represented as first-class Aspire resources. This enables 
 
 **How it works:**
 1. Define a `startupForm` section in your `projectcommander.json`
-2. Call `WithProjectManifest()` which returns a tuple with the optional `StartupFormResource`
-3. Call `WithStartupFormBehavior()` on the form resource to register the Configure command
-4. Use `WaitFor(startupFormResource)` to block the project until the form is completed
-5. The form resource appears in the dashboard with state `WaitingForConfiguration`
-6. When the user submits the form, the resource transitions to `Running` and the project starts
+2. Call `WithProjectManifest()` — the startup form resource is automatically created, wired up, and the project is configured to wait for it
+3. The form resource appears in the dashboard with state `WaitingForConfiguration`
+4. When the user submits the form, the resource transitions to `Running` and the project starts
 
 **Example:**
 ```csharp
-var (datagenerator, datageneratorConfig) = builder.AddProject<Projects.DataGenerator>("datagenerator")
+builder.AddProject<Projects.DataGenerator>("datagenerator")
     .WithReference(commander)
     .WaitFor(commander)
     .WithProjectManifest();
-
-if (datageneratorConfig is not null)
-{
-    datageneratorConfig.WithStartupFormBehavior();
-    datagenerator.WaitFor(datageneratorConfig);
-}
 ```
 
 **Client-side:**
@@ -83,7 +74,7 @@ You can now use both `WithProjectManifest()` and `WithProjectCommands()` togethe
 
 | File | Changes |
 |------|---------|
-| `ResourceBuilderProjectCommanderExtensions.cs` | `WithProjectManifest()` now returns tuple with `StartupFormResource` |
+| `ResourceBuilderProjectCommanderExtensions.cs` | `WithProjectManifest()` automatically wires up the startup form resource |
 | `DistributedApplicationBuilderExtensions.cs` | Added `WithStartupFormBehavior()` extension |
 | `ProjectCommanderHub.cs` | Uses `StartupFormResourceAnnotation`, sends cached form data on connect |
 | `IAspireProjectCommanderClient.cs` | Startup form interface members |
