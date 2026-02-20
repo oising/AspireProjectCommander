@@ -13,7 +13,7 @@ internal sealed class ResourceNameParser : IResourceNameParser
             throw new ArgumentException("Resource name cannot be null or empty.", nameof(resourceName));
         }
 
-        // Split on first hyphen to extract base name
+        // Split on last hyphen to extract base name
         // Example: "datagenerator-abc123" -> "datagenerator"
         if (!resourceName.Contains('-'))
         {
