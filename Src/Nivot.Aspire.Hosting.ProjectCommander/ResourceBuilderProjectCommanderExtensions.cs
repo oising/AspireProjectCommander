@@ -23,16 +23,13 @@ public static class ResourceBuilderProjectCommanderExtensions
 {
     /// <summary>
     /// Registers project commands from a projectcommander.json manifest file located in the project directory.
-    /// If the manifest defines a startup form, a <see cref="StartupFormResource"/> is created that the project
-    /// can wait on using <see cref="ResourceBuilderExtensions.WaitFor{T}(IResourceBuilder{T}, IResourceBuilder{IResource})"/>.
+    /// If the manifest defines a startup form, a <see cref="StartupFormResource"/> is created and automatically
+    /// configured so the project waits for it to be completed before starting.
     /// </summary>
     /// <typeparam name="T">The type of project resource.</typeparam>
     /// <param name="builder">The resource builder.</param>
-    /// <returns>
-    /// A tuple containing the project resource builder and an optional startup form resource builder.
-    /// The startup form resource is null if no startup form is defined in the manifest.
-    /// </returns>
-    public static (IResourceBuilder<T> Project, IResourceBuilder<StartupFormResource>? StartupForm) WithProjectManifest<T>(
+    /// <returns>The resource builder for chaining.</returns>
+    public static IResourceBuilder<T> WithProjectManifest<T>(
         this IResourceBuilder<T> builder)
         where T : ProjectResource
     {
@@ -42,10 +39,8 @@ public static class ResourceBuilderProjectCommanderExtensions
         if (manifest == null)
         {
             // No manifest found, nothing to register
-            return (builder, null);
+            return builder;
         }
-
-        IResourceBuilder<StartupFormResource>? startupFormBuilder = null;
 
         // Create startup form resource if present
         if (manifest.StartupForm != null)
@@ -62,7 +57,7 @@ public static class ResourceBuilderProjectCommanderExtensions
             builder.WithEnvironment("PROJECTCOMMANDER_STARTUP_FORM_REQUIRED", "true");
 
             // Add the startup form resource to the application model
-            startupFormBuilder = builder.ApplicationBuilder.AddResource(startupFormResource)
+            var startupFormBuilder = builder.ApplicationBuilder.AddResource(startupFormResource)
                 .WithInitialState(new CustomResourceSnapshot
                 {
                     ResourceType = "StartupForm",
@@ -74,6 +69,11 @@ public static class ResourceBuilderProjectCommanderExtensions
                     ]
                 })
                 .ExcludeFromManifest();
+
+            // Automatically wire up the startup form behavior, wait dependency, and parent relationship
+            startupFormBuilder.WithStartupFormBehavior();
+            builder.WaitFor(startupFormBuilder);
+            startupFormBuilder.WithParentRelationship(builder);
         }
 
         // Register commands from manifest
@@ -90,7 +90,7 @@ public static class ResourceBuilderProjectCommanderExtensions
             builder.WithProjectCommands(projectCommands);
         }
 
-        return (builder, startupFormBuilder);
+        return builder;
     }
 
     /// <summary>

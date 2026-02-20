@@ -13,6 +13,26 @@ Aspire Project Commander is a set of packages that lets you send simple string c
 |Integration|`Nivot.Aspire.ProjectCommander`|![NuGet Version](https://img.shields.io/nuget/v/Nivot.Aspire.ProjectCommander)|
 |Hosting|`Nivot.Aspire.Hosting.ProjectCommander`|![NuGet Version](https://img.shields.io/nuget/v/Nivot.Aspire.Hosting.ProjectCommander)|
 
+## Installation
+
+### AppHost Project
+
+Add the hosting package to your Aspire AppHost project:
+
+```bash
+cd YourAppHost
+dotnet add package Nivot.Aspire.Hosting.ProjectCommander
+```
+
+### Client Projects
+
+Add the integration package to each project that will receive commands or use startup forms:
+
+```bash
+cd YourProject
+dotnet add package Nivot.Aspire.ProjectCommander
+```
+
 ## Features
 
 - **Custom Project Commands** - Send commands from the Aspire Dashboard to running projects
@@ -102,23 +122,21 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var commander = builder.AddAspireProjectCommander();
 
-// WithProjectManifest returns a tuple: (project builder, optional startup form resource)
-var (datagenerator, datageneratorConfig) = builder.AddProject<Projects.DataGenerator>("datagenerator")
+var datagenerator = builder.AddProject<Projects.DataGenerator>("datagenerator")
     .WithReference(commander)
     .WaitFor(commander)
     .WithProjectManifest(); // Reads commands and startup form from projectcommander.json
 
-// If the project has a startup form, configure it and make the project wait for it
-if (datageneratorConfig is not null)
-{
-    datageneratorConfig.WithStartupFormBehavior();
-    datagenerator.WaitFor(datageneratorConfig); // Project won't start until form is completed
-}
-
 builder.Build().Run();
 ```
 
-The startup form appears as a separate resource in the Aspire dashboard with state `WaitingForConfiguration`. 
+The `WithProjectManifest()` extension method automatically:
+- Reads commands from `projectcommander.json` and registers them in the dashboard
+- If a `startupForm` is defined, creates a `StartupFormResource` that appears in the dashboard
+- Configures `WaitFor` so the project doesn't start until the form is completed
+- Sets up parent-child relationship for visual grouping in the dashboard
+
+The startup form appears as a separate resource in the Aspire Dashboard with state `WaitingForConfiguration`. 
 The project is blocked by Aspire's `WaitFor` until the developer clicks "Configure" and submits the form, 
 at which point the form resource transitions to `Running` and the project starts.
 
@@ -240,10 +258,70 @@ public sealed class MyProjectCommands(IAspireProjectCommanderClient commander, I
 You can use both `WithProjectManifest()` and `WithProjectCommands()` together - the commands will be merged:
 
 ```csharp
-builder.AddProject<Projects.DataGenerator>("datagenerator")
+var datagenerator = builder.AddProject<Projects.DataGenerator>("datagenerator")
     .WithReference(commander)
-    .WithProjectManifest()                              // Commands from manifest
+    .WaitFor(commander)
+    .WithProjectManifest()                              // Commands from manifest + startup form handling
     .WithProjectCommands(new("extra", "Extra Command")); // Additional code-defined command
+```
+
+## Quick Start Example
+
+Here's a complete minimal example:
+
+**AppHost/Program.cs:**
+```csharp
+var builder = DistributedApplication.CreateBuilder(args);
+
+var commander = builder.AddAspireProjectCommander();
+
+builder.AddProject<Projects.MyService>("myservice")
+    .WithReference(commander)
+    .WaitFor(commander)
+    .WithProjectManifest();
+
+builder.Build().Run();
+```
+
+**MyService/projectcommander.json:**
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oising/AspireProjectCommander/main/schemas/projectcommander-v1.schema.json",
+  "version": "1.0",
+  "commands": [
+    { "name": "ping", "displayName": "Ping" }
+  ]
+}
+```
+
+**MyService/Program.cs:**
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+builder.AddServiceDefaults();
+builder.Services.AddAspireProjectCommanderClient();
+builder.Services.AddHostedService<CommandHandler>();
+
+var app = builder.Build();
+app.MapDefaultEndpoints();
+app.Run();
+```
+
+**MyService/CommandHandler.cs:**
+```csharp
+public sealed class CommandHandler(IAspireProjectCommanderClient commander, ILogger<CommandHandler> logger) 
+    : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        commander.CommandReceived += (command, args, sp) =>
+        {
+            logger.LogInformation("Received: {Command}", command);
+            return Task.CompletedTask;
+        };
+
+        await Task.Delay(Timeout.Infinite, stoppingToken);
+    }
+}
 ```
 
 ## Sample

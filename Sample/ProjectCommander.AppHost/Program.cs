@@ -16,21 +16,12 @@ var datahub = builder.AddAzureEventHubs("data")
 
 var client = datahub.AddConsumerGroup("client");
 
-// WithProjectManifest now returns a tuple with the project and optional startup form resource
-var (datagenerator, datageneratorConfig) = builder.AddProject<Projects.DataGenerator>("datagenerator")
+var datagenerator = builder.AddProject<Projects.DataGenerator>("datagenerator")
     .WithReference(datahub)
     .WithReference(commander)
     .WaitFor(commander)
     .WaitFor(datahub)
     .WithProjectManifest(); // Reads commands and startup form from projectcommander.json
-
-// If the project has a startup form, configure it and make the project wait for it
-if (datageneratorConfig is not null)
-{
-    datageneratorConfig.WithStartupFormBehavior();
-    datagenerator.WaitFor(datageneratorConfig);
-    datageneratorConfig.WithParentRelationship(datagenerator);
-}
 
 builder.AddProject<Projects.Consumer>("consumer")
     .WithReference(commander)

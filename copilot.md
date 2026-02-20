@@ -39,3 +39,38 @@ This repo contains .NET Aspire libraries that enable custom project commands fro
 ## Tests
 - Keep new tests alongside ProjectCommander.Tests.
 - Favor integration-style tests when validating end-to-end command flow.
+
+## Aspire custom resource lifecycle patterns
+
+### WaitFor and ResourceReadyEvent
+When creating custom Aspire resources that other resources can `WaitFor`:
+
+1. **Subscribe to `InitializeResourceEvent`** - Custom resources must opt-in to Aspire's lifecycle by subscribing to this event. Without this, the resource isn't tracked by Aspire's orchestrator.
+
+2. **Publish `BeforeResourceStartedEvent`** before transitioning to `Running` state - This signals to Aspire that the resource is about to start.
+
+3. **Publish `ResourceReadyEvent` for process-less custom resources** - Aspire automatically publishes `ResourceReadyEvent` for built-in types (Container, Project, Executable) that have actual processes. For custom resources without a process (like `StartupFormResource`), you must manually publish this event to unblock `WaitFor` dependents.
+
+4. **Resolve services from runtime `ServiceProvider`, not build-time builder** - When publishing events from command handlers or callbacks that execute at runtime:
+   ```csharp
+   // WRONG - captured at build time, may not work at runtime
+   await builder.ApplicationBuilder.Eventing.PublishAsync(...);
+   
+   // CORRECT - resolved at runtime
+   var eventing = context.ServiceProvider.GetRequiredService<IDistributedApplicationEventing>();
+   await eventing.PublishAsync(...);
+   ```
+
+### State machine for one-time configuration resources
+For resources like startup forms that block until user input:
+1. Initial state: Custom state (e.g., `WaitingForConfiguration`)
+2. After user completes form: `Running` → publish `ResourceReadyEvent` → `Finished`
+
+### Key Aspire eventing types
+- `InitializeResourceEvent` - First event fired for any resource
+- `BeforeResourceStartedEvent` - Just before execution begins
+- `ResourceReadyEvent` - Unblocks dependents waiting via `WaitFor`
+- Namespace: `Aspire.Hosting.Eventing`
+
+### Reference documentation
+- Aspire app model spec: https://github.com/dotnet/aspire/blob/main/docs/specs/appmodel.md
