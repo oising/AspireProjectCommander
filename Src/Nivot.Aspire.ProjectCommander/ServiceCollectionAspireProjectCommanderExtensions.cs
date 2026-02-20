@@ -9,6 +9,8 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// </summary>
 public static class ServiceCollectionAspireProjectCommanderExtensions
 {
+    private static bool _isRegistered;
+
     /// <summary>
     /// Adds the Aspire Project Commander client to the service collection.
     /// </summary>
@@ -16,19 +18,15 @@ public static class ServiceCollectionAspireProjectCommanderExtensions
     /// <returns>Returns the updated service collection.</returns>
     public static IServiceCollection AddAspireProjectCommanderClient(this IServiceCollection services)
     {
-        // var sp = services.BuildServiceProvider();
-        
-        // if (sp.GetService<IAspireProjectCommanderClient>() is null)
-        // {
-        //     var worker = ActivatorUtilities.CreateInstance<AspireProjectCommanderClientWorker>(sp);
-        //     services.AddSingleton<IHostedService>(worker);
-        //     services.AddSingleton<IAspireProjectCommanderClient>(worker);
-        // }
-
-        services.AddSingleton<IStartupFormService, StartupFormService>();
-        services.AddSingleton<AspireProjectCommanderClientWorker>();
-        services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<AspireProjectCommanderClientWorker>());
-        services.AddSingleton<IAspireProjectCommanderClient>(sp => sp.GetRequiredService<AspireProjectCommanderClientWorker>());
+        // No way to use the TryAdd* variants as they don't cover this scenario/overloads
+        if (!_isRegistered)
+        {
+            services.AddSingleton<IStartupFormService, StartupFormService>();
+            services.AddSingleton<AspireProjectCommanderClientWorker>();
+            services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<AspireProjectCommanderClientWorker>());
+            services.AddSingleton<IAspireProjectCommanderClient>(sp => sp.GetRequiredService<AspireProjectCommanderClientWorker>());
+            _isRegistered = true;
+        }
 
         return services;
     }
