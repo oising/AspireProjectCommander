@@ -1,3 +1,4 @@
+using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.SignalR;
@@ -11,19 +12,82 @@ namespace CommunityToolkit.Aspire.Hosting.ProjectCommander;
 /// <param name="logger"></param>
 /// <param name="loggerService"></param>
 /// <param name="model"></param>
-internal sealed class ProjectCommanderHub(ILogger logger, ResourceLoggerService loggerService, DistributedApplicationModel model) : Hub
+/// <param name="resourceNameParser"></param>
+internal sealed class ProjectCommanderHub(
+    ILogger logger, 
+    ResourceLoggerService loggerService, 
+    DistributedApplicationModel model,
+    IResourceNameParser resourceNameParser) : Hub
 {
     /// <summary>
     /// Identifies the connecting client by adding it to a group named after the resource.
+    /// Also checks if the resource has a startup form and notifies the client.
     /// </summary>
-    /// <param name="resourceName"></param>
+    /// <param name="resourceName">The resource name (e.g., "datagenerator-abc123").</param>
     /// <returns></returns>
     [UsedImplicitly]
-    public async Task Identify([ResourceName] string resourceName)
+    public async Task Identify([ResourceName] string resourceName) //, ProjectCommand[]? commands = null)
     {
         logger.LogInformation("{ResourceName} connected to Aspire Project Commander Hub", resourceName);
 
         await Groups.AddToGroupAsync(Context.ConnectionId, resourceName);
+
+        // Check if this resource has a startup form resource and notify the client
+        var baseResourceName = resourceNameParser.GetBaseResourceName(resourceName);
+        var resource = model.Resources.FirstOrDefault(r => r.Name == baseResourceName);
+
+        if (resource != null)
+        {
+            var startupFormAnnotation = resource.Annotations.OfType<StartupFormResourceAnnotation>().FirstOrDefault();
+            if (startupFormAnnotation != null && !startupFormAnnotation.StartupFormResource.IsCompleted)
+            {
+                // Notify client that a startup form is required
+                var form = startupFormAnnotation.StartupFormResource.Form;
+                await Clients.Caller.SendAsync("StartupFormRequired", form.Title);
+                logger.LogInformation("{ResourceName} requires startup form: {Title}", resourceName, form.Title);
+            }
+            else if (startupFormAnnotation != null && startupFormAnnotation.StartupFormResource.IsCompleted)
+            {
+                // Form already completed, send the data to the newly connected client
+                logger.LogInformation("{ResourceName} startup form already completed, sending cached data", resourceName);
+                await Clients.Caller.SendAsync(
+                    "ReceiveStartupForm", 
+                    baseResourceName, 
+                    startupFormAnnotation.StartupFormResource.FormData);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Called by the project to signal that it has received and validated startup form data.
+    /// </summary>
+    /// <param name="resourceName">The resource name.</param>
+    /// <param name="success">Whether the form was validated successfully.</param>
+    /// <param name="errorMessage">Optional error message if validation failed.</param>
+    [UsedImplicitly]
+    public async Task StartupFormCompleted([ResourceName] string resourceName, bool success, string? errorMessage = null)
+    {
+        logger.LogInformation("{ResourceName} startup form completed: Success={Success}", resourceName, success);
+
+        // Find the resource and update the StartupFormResource
+        var baseResourceName = resourceNameParser.GetBaseResourceName(resourceName);
+        var resource = model.Resources.FirstOrDefault(r => r.Name == baseResourceName);
+
+        if (resource != null)
+        {
+            var annotation = resource.Annotations.OfType<StartupFormResourceAnnotation>().FirstOrDefault();
+            if (annotation != null)
+            {
+                // Note: The StartupFormResource state is managed by the command handler in
+                // DistributedApplicationBuilderExtensions.WithStartupFormBehavior()
+                // This callback is mainly for logging and notifying other clients
+                logger.LogDebug("StartupFormResource '{FormName}' completion acknowledged", 
+                    annotation.StartupFormResource.Name);
+            }
+        }
+
+        // Notify dashboard/orchestrator that startup is complete
+        await Clients.All.SendAsync("StartupFormStatusChanged", resourceName, success, errorMessage);
     }
 
     /// <summary>

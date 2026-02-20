@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/oising/AspireProjectCommander/main/schemas/projectcommander-v1.schema.json",
+  "title": "Project Commander Manifest",
+  "description": "Schema for projectcommander.json manifest files that define commands and startup forms for Aspire Project Commander.",
+  "type": "object",
+  "required": ["version"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Reference to this JSON schema for validation and IntelliSense."
+    },
+    "version": {
+      "type": "string",
+      "enum": ["1.0"],
+      "description": "The version of the manifest schema. Currently only '1.0' is supported."
+    },
+    "startupForm": {
+      "$ref": "#/$defs/startupForm",
+      "description": "Optional startup form that must be completed before the project starts its main work."
+    },
+    "commands": {
+      "type": "array",
+      "description": "Commands that should be added to the Aspire dashboard for this project.",
+      "items": {
+        "$ref": "#/$defs/command"
+      }
+    }
+  },
+  "$defs": {
+    "inputType": {
+      "type": "string",
+      "enum": ["Text", "SecretText", "Choice", "Boolean", "Number"],
+      "description": "The type of input control to display."
+    },
+    "input": {
+      "type": "object",
+      "description": "Defines an input field for a command or startup form.",
+      "required": ["name", "inputType"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The unique name of the input field. Used as the key in the returned data dictionary."
+        },
+        "label": {
+          "type": "string",
+          "description": "The label displayed to the user. Defaults to the name if not specified."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description or help text for the input."
+        },
+        "inputType": {
+          "$ref": "#/$defs/inputType"
+        },
+        "required": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this input must be filled out."
+        },
+        "placeholder": {
+          "type": "string",
+          "description": "Placeholder text shown when the input is empty."
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum number of characters allowed for text inputs."
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Available options for Choice input type."
+        },
+        "allowCustomChoice": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether custom values are allowed for Choice input type."
+        },
+        "enableDescriptionMarkdown": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the description supports Markdown rendering."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "inputType": { "const": "Choice" }
+            }
+          },
+          "then": {
+            "required": ["options"],
+            "properties": {
+              "options": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "startupForm": {
+      "type": "object",
+      "description": "Defines a startup form that blocks project execution until filled out by the developer.",
+      "required": ["title", "inputs"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The title of the startup form dialog."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description text displayed below the title."
+        },
+        "inputs": {
+          "type": "array",
+          "description": "The input fields for the startup form.",
+          "items": {
+            "$ref": "#/$defs/input"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "command": {
+      "type": "object",
+      "description": "Defines a command that appears in the Aspire dashboard for this project.",
+      "required": ["name", "displayName"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "The unique identifier for the command. Must be lowercase alphanumeric with hyphens."
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The display name shown in the Aspire dashboard."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description of what the command does."
+        },
+        "iconName": {
+          "type": "string",
+          "description": "The icon name to display. Uses Fluent UI icon names (e.g., 'Play', 'Stop', 'Settings')."
+        },
+        "iconVariant": {
+          "type": "string",
+          "enum": ["Regular", "Filled"],
+          "default": "Regular",
+          "description": "The icon variant to use."
+        },
+        "confirmationMessage": {
+          "type": "string",
+          "description": "Optional confirmation message to show before executing the command."
+        },
+        "isHighlighted": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the command should be visually highlighted in the dashboard."
+        },
+        "inputs": {
+          "type": "array",
+          "description": "Optional input fields to prompt for when the command is executed.",
+          "items": {
+            "$ref": "#/$defs/input"
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "version": "1.0",
+      "startupForm": {
+        "title": "Configure Service",
+        "description": "Please configure the service settings.",
+        "inputs": [
+          {
+            "name": "connectionString",
+            "label": "Connection String",
+            "inputType": "SecretText",
+            "required": true
+          }
+        ]
+      },
+      "commands": [
+        {
+          "name": "start",
+          "displayName": "Start Processing",
+          "iconName": "Play"
+        },
+        {
+          "name": "stop",
+          "displayName": "Stop Processing",
+          "iconName": "Stop"
+        }
+      ]
+    }
+  ]
+}

@@ -1,5 +1,9 @@
+#pragma warning disable ASPIREINTERACTION001
+
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Eventing;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -97,5 +101,168 @@ public static class DistributedApplicationBuilderExtensions
 #endif
             })
             .ExcludeFromManifest();
+    }
+
+    /// <summary>
+    /// Configures the startup form resource with the "Configure" command and lifecycle management.
+    /// Call this method after <see cref="ResourceBuilderProjectCommanderExtensions.WithProjectManifest{T}"/>
+    /// to wire up the form's command handler and state transitions.
+    /// </summary>
+    /// <param name="builder">The startup form resource builder.</param>
+    /// <returns>The resource builder for chaining.</returns>
+    public static IResourceBuilder<StartupFormResource> WithStartupFormBehavior(
+        this IResourceBuilder<StartupFormResource> builder)
+    {
+        var formResource = builder.Resource;
+        var form = formResource.Form;
+        var inputs = form.Inputs.Select(ManifestReader.ToInteractionInput).ToArray();
+
+        // Subscribe to InitializeResourceEvent to participate in Aspire's lifecycle.
+        // This is required for WaitFor to work correctly with custom resources.
+        // We don't transition to Running here - we stay in WaitingForConfiguration
+        // until the user completes the form.
+        builder.ApplicationBuilder.Eventing.Subscribe<InitializeResourceEvent>(formResource, async (e, ct) =>
+        {
+            var notify = e.Services.GetRequiredService<ResourceNotificationService>();
+            var logger = e.Services.GetRequiredService<ResourceLoggerService>().GetLogger(formResource);
+
+            logger.LogInformation("Startup form '{FormTitle}' initialized - waiting for user configuration", form.Title);
+
+            // Keep the resource in WaitingForConfiguration state
+            // The state was already set via WithInitialState, but we update the timestamp
+            await notify.PublishUpdateAsync(formResource, state => state with
+            {
+                CreationTimeStamp = DateTime.Now
+            });
+        });
+
+        // Register the "Configure" command on the startup form resource
+        builder.WithCommand(
+            name: "projectcommander-configure",
+            displayName: form.Title,
+            executeCommand: async (context) =>
+            {
+                // Check if the startup form has already been completed
+                if (formResource.IsCompleted)
+                {
+                    return new ExecuteCommandResult
+                    {
+                        Success = false,
+                        ErrorMessage = "Startup form has already been submitted. Restart the resource to configure again."
+                    };
+                }
+
+                try
+                {
+                    var model = context.ServiceProvider.GetRequiredService<DistributedApplicationModel>();
+                    var hubResource = model.Resources.OfType<ProjectCommanderHubResource>().SingleOrDefault();
+
+                    if (hubResource?.Hub == null)
+                    {
+                        return new ExecuteCommandResult
+                        {
+                            Success = false,
+                            ErrorMessage = "Project Commander hub is not running."
+                        };
+                    }
+
+                    var interaction = context.ServiceProvider.GetRequiredService<IInteractionService>();
+
+                    // Show the startup form prompt
+                    var result = await interaction.PromptInputsAsync(
+                        form.Title,
+                        form.Description ?? "Please configure the following settings:",
+                        inputs,
+                        cancellationToken: context.CancellationToken);
+
+                    if (result.Canceled)
+                    {
+                        return new ExecuteCommandResult
+                        {
+                            Success = false,
+                            ErrorMessage = "Configuration cancelled."
+                        };
+                    }
+
+                    // Build form data dictionary
+                    var formData = new Dictionary<string, string?>();
+                    for (var i = 0; i < inputs.Length; i++)
+                    {
+                        formData[inputs[i].Name] = result.Data[i].Value;
+                    }
+
+                    // Mark the form resource as completed
+                    formResource.MarkCompleted(formData);
+
+                    // Send form data to the project via SignalR
+                    var groupName = formResource.ParentProject.Name;
+                    
+                    // Get all instances of the parent project (handles replicas)
+                    // The SignalR group is named after the resource instance name (e.g., "datagenerator-abc123")
+                    // We need to send to all instances that match the base resource name
+                    await hubResource.Hub.Clients.All.SendAsync(
+                        "ReceiveStartupForm",
+                        groupName,
+                        formData,
+                        context.CancellationToken);
+
+                    // Get the eventing service from the runtime service provider
+                    var eventing = context.ServiceProvider.GetRequiredService<IDistributedApplicationEventing>();
+
+                    // Publish BeforeResourceStartedEvent to signal we're about to start.
+                    // This is required for Aspire to properly track the resource lifecycle.
+                    await eventing.PublishAsync(
+                        new BeforeResourceStartedEvent(formResource, context.ServiceProvider),
+                        context.CancellationToken);
+
+                    // Transition the startup form resource to Running state.
+                    var notify = context.ServiceProvider.GetRequiredService<ResourceNotificationService>();
+                    await notify.PublishUpdateAsync(formResource, state => state with
+                    {
+                        State = KnownResourceStates.Running,
+                        StartTimeStamp = DateTime.Now,
+                        Properties = [
+                            .. state.Properties,
+                            new("form.completedAt", DateTime.Now.ToString("O"))
+                        ]
+                    });
+
+                    // For custom resources without a process (like StartupFormResource), we must manually
+                    // publish ResourceReadyEvent. Aspire's automatic ResourceReadyEvent publishing only
+                    // works for built-in resource types (Container, Project, Executable) that have
+                    // actual processes Aspire monitors. This is what unblocks WaitFor dependents.
+                    await eventing.PublishAsync(
+                        new ResourceReadyEvent(formResource, context.ServiceProvider),
+                        context.CancellationToken);
+
+                    // Now transition to Finished to indicate this is a completed one-time task
+                    await notify.PublishUpdateAsync(formResource, state => state with
+                    {
+                        State = KnownResourceStates.Finished
+                    });
+
+                    return new ExecuteCommandResult { Success = true };
+                }
+                catch (Exception ex)
+                {
+                    return new ExecuteCommandResult
+                    {
+                        Success = false,
+                        ErrorMessage = ex.Message
+                    };
+                }
+            },
+            new CommandOptions
+            {
+                IconName = "Settings",
+                IconVariant = IconVariant.Regular,
+                IsHighlighted = true,
+                // Dynamically update command state based on whether form is completed
+                UpdateState = (context) => formResource.IsCompleted
+                    ? ResourceCommandState.Disabled
+                    : ResourceCommandState.Enabled
+            });
+
+        return builder;
     }
 }

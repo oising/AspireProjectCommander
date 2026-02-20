@@ -1,3 +1,5 @@
+#pragma warning disable ASPIREINTERACTION001
+
 using CommunityToolkit.Aspire.Hosting.ProjectCommander;
 
 var builder = DistributedApplication.CreateBuilder(args);
@@ -14,17 +16,16 @@ var datahub = builder.AddAzureEventHubs("data")
 
 var client = datahub.AddConsumerGroup("client");
 
-builder.AddProject<Projects.DataGenerator>("datagenerator")
+var datagenerator = builder.AddProject<Projects.DataGenerator>("datagenerator")
     .WithReference(datahub)
     .WithReference(commander)
     .WaitFor(commander)
     .WaitFor(datahub)
-    .WithProjectCommands(
-        new("slow", "Go Slow"),
-        new("fast", "Go Fast"));
+    .WithProjectManifest(); // Reads commands and startup form from projectcommander.json
 
 builder.AddProject<Projects.Consumer>("consumer")
     .WithReference(commander)
+    .WaitFor(commander)
     .WithReference(client)
     .WaitFor(datahub);
 

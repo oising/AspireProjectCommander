@@ -9,13 +9,13 @@
 	<PackageProjectUrl>https://github.com/oising/AspireProjectCommander/</PackageProjectUrl>
 	<PackageIcon>icon.png</PackageIcon>
 	<PackageReadmeFile>README.md</PackageReadmeFile>
-	<Description>Aspire Project Commander is a set of packages that lets you send simple string commands from the dashboard directly to projects.</Description>
+	<Description>Aspire Project Commander is a set of packages that lets you send commands or ask for initialization data from the dashboard directly to and from projects.</Description>
 	<PackageTags>aspire hosting integration apphost signal</PackageTags>
 	<GenerateDocumentationFile>True</GenerateDocumentationFile>
 	<EnablePackageValidation>true</EnablePackageValidation>
 	<GenerateDocumentationFile>True</GenerateDocumentationFile>
 	<EnablePackageValidation>true</EnablePackageValidation>
-	<PackageVersion>1.1.0</PackageVersion>
+	<PackageVersion>2.0.0</PackageVersion>
 	<Authors>oisin</Authors>
 </PropertyGroup>
 <ItemGroup>

@@ -1,36 +1,92 @@
 sequenceDiagram
     participant AppHost as Aspire AppHost
     participant Hub as ProjectCommanderHub<br/>(SignalR Server)
+    participant Dashboard as Aspire Dashboard
     participant DataGen as DataGenerator<br/>(AspireProjectCommanderClientWorker)
     participant Worker as DataGeneratorWorker<br/>(BackgroundService)
 
-    Note over AppHost,Worker: Application Startup
-    AppHost->>Hub: Start SignalR Hub on localhost
+    Note over AppHost,Worker: Application Startup - Manifest Processing
+
+    AppHost->>AppHost: WithProjectManifest() called
+    AppHost->>AppHost: Read projectcommander.json<br/>from project directory
+
+    alt Manifest has StartupForm
+        AppHost->>AppHost: Create StartupFormResource<br/>(e.g., "datagenerator-config")
+        AppHost->>AppHost: Attach StartupFormResourceAnnotation<br/>to parent project
+        AppHost->>AppHost: Set PROJECTCOMMANDER_STARTUP_FORM_REQUIRED=true
+        AppHost->>AppHost: Set resource state = "WaitingForConfiguration"
+    end
+
+    AppHost->>AppHost: Register commands from manifest<br/>via WithProjectCommands()
+
+    AppHost->>AppHost: WithStartupFormBehavior() called
+    AppHost->>AppHost: Register "Configure" command<br/>on StartupFormResource
+
+    AppHost->>Hub: Start SignalR Hub on localhost:27960
     Hub-->>AppHost: Hub started successfully
-    
+
+    Note over AppHost,Worker: Aspire WaitFor Semantics
+
+    AppHost->>AppHost: datagenerator.WaitFor(datageneratorConfig)
+    Note over AppHost: Project blocked until<br/>StartupFormResource is Running
+
+    Dashboard->>AppHost: User clicks "Configure" on<br/>datagenerator-config resource
+
+    AppHost->>Dashboard: IInteractionService.PromptInputsAsync()<br/>Show form with inputs
+    Dashboard-->>AppHost: User submits form data
+
+    AppHost->>AppHost: StartupFormResource.MarkCompleted(formData)
+    AppHost->>AppHost: PublishUpdateAsync(state = Running)
+    Note over AppHost: WaitFor unblocked -<br/>project can now start
+
+    AppHost->>Hub: hub.Clients.All.SendAsync<br/>("ReceiveStartupForm", resourceName, formData)
+
+    Note over AppHost,Worker: Project Connection (after WaitFor unblocks)
+
+    DataGen->>DataGen: Check PROJECTCOMMANDER_STARTUP_FORM_REQUIRED env var
     DataGen->>Hub: Connect to SignalR Hub
     Note over DataGen: Using connection string from<br/>'project-commander' config
-    
+
     DataGen->>Hub: InvokeAsync("Identify", resourceName)
     Note over DataGen: resourceName = "datagenerator-{suffix}"
     Hub->>Hub: Groups.AddToGroupAsync(connectionId, resourceName)
+
+    alt StartupFormResource.IsCompleted
+        Hub->>DataGen: SendAsync("ReceiveStartupForm",<br/>resourceName, cachedFormData)
+        Note over DataGen: Hub sends cached form data<br/>to newly connected client
+    end
+
     Hub-->>DataGen: Connection established and grouped
-    
+
     DataGen->>DataGen: Register "ReceiveCommand" handler
-    Note over DataGen: hub.On<string>("ReceiveCommand", handler)
-    
+    DataGen->>DataGen: Register "ReceiveStartupForm" handler
+    Note over DataGen: hub.On<string, Dict>("ReceiveStartupForm", handler)
+
+    DataGen->>DataGen: ReceiveStartupForm(resourceName, formData)
+    DataGen->>DataGen: Invoke StartupFormReceived handlers
+    DataGen->>Hub: InvokeAsync("StartupFormCompleted",<br/>resourceName, success)
+
+    Worker->>Worker: Apply startup configuration
+    Note over Worker: Set initial delay, mode, etc.<br/>from form data
+
     Note over AppHost,Worker: Command Execution Flow
-    AppHost->>AppHost: User clicks "Go Slow" or "Go Fast"<br/>in Aspire Dashboard
-    
-    AppHost->>Hub: Execute command via<br/>WithCommand callback
+
+    Dashboard->>AppHost: User clicks command<br/>in Aspire Dashboard
+
+    AppHost->>AppHost: Execute command via<br/>WithCommand callback
     Note over AppHost: Resolves ProjectCommanderHubResource<br/>and gets IHubContext
-    
-    Hub->>DataGen: Clients.Group(resourceName)<br/>.SendAsync("ReceiveCommand", commandName)
-    Note over Hub: commandName = "slow" or "fast"
-    
+
+    alt Command has inputs (e.g., "Specify Delay...")
+        AppHost->>Dashboard: IInteractionService.PromptInputsAsync()
+        Dashboard-->>AppHost: User enters values
+    end
+
+    Hub->>DataGen: Clients.Group(resourceName)<br/>.SendAsync("ReceiveCommand", name, args[])
+    Note over Hub: commandName + arguments array
+
     DataGen->>DataGen: Trigger registered handler
-    DataGen->>Worker: Fire CommandReceived event<br/>with command name
-    
+    DataGen->>Worker: Fire CommandReceived event<br/>with command name and args
+
     Worker->>Worker: Process command
     alt Command is "slow"
         Worker->>Worker: Set period = 1 second
@@ -38,6 +94,16 @@ sequenceDiagram
     else Command is "fast"
         Worker->>Worker: Set period = 10 milliseconds
         Worker->>Worker: Log "Fast command received"
+    else Command is "specify"
+        Worker->>Worker: Parse delay from args[0]
+        Worker->>Worker: Set period = delay seconds
+        Worker->>Worker: Log "Period was set to {period}"
+    else Command is "pause"
+        Worker->>Worker: Set _isPaused = true
+        Worker->>Worker: Log "Data generation paused"
+    else Command is "resume"
+        Worker->>Worker: Set _isPaused = false
+        Worker->>Worker: Log "Data generation resumed"
     end
-    
-    Note over Worker: Worker continues data generation<br/>with new timing period
+
+    Note over Worker: Worker continues data generation<br/>with updated settings

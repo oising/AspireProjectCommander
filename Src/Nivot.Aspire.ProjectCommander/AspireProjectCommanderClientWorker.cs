@@ -10,40 +10,58 @@ namespace CommunityToolkit.Aspire.ProjectCommander
     /// </summary>
     /// <param name="configuration"></param>
     /// <param name="serviceProvider"></param>
+    /// <param name="startupFormService"></param>
     /// <param name="logger"></param>
-    internal sealed class AspireProjectCommanderClientWorker(IConfiguration configuration, IServiceProvider serviceProvider, ILogger<AspireProjectCommanderClientWorker> logger)
+    internal sealed class AspireProjectCommanderClientWorker(
+        IConfiguration configuration, 
+        IServiceProvider serviceProvider, 
+        IStartupFormService startupFormService,
+        ILogger<AspireProjectCommanderClientWorker> logger)
     : BackgroundService, IAspireProjectCommanderClient
     {
-        private readonly List<Func<string, IServiceProvider, Task>> _commandHandlers = new();
+        private readonly List<Func<string, string[], IServiceProvider, Task>> _commandHandlers = new();
+        private readonly List<Func<Dictionary<string, string?>, IServiceProvider, Task<bool>>> _startupFormHandlers = new();
+
+        private HubConnection? _hub;
+        private string? _aspireResourceName;
+        private string? _baseResourceName;
+
+        /// <inheritdoc />
+        public bool IsStartupFormRequired => startupFormService.IsStartupFormRequired;
+
+        /// <inheritdoc />
+        public bool IsStartupFormCompleted => startupFormService.IsStartupFormCompleted;
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             await Task.Run(async () =>
             {
-                // TODO: maybe hardcode to a wellknown value, i.e. a unique guid?
+                // Check if startup form is required via environment variable
+                var isRequired = Environment.GetEnvironmentVariable("PROJECTCOMMANDER_STARTUP_FORM_REQUIRED") == "true";
+                startupFormService.SetStartupFormRequired(isRequired);
+
                 var connectionString = configuration.GetConnectionString("project-commander");
-                
+
                 if (connectionString == null)
                 {
                     throw new InvalidOperationException("Connection string 'project-commander' not found");
                 }
 
-                var hub = new HubConnectionBuilder()
+                _hub = new HubConnectionBuilder()
                     .WithUrl(connectionString)
                     .WithAutomaticReconnect()
                     .Build();
 
-                // Wire up a command handler
-                hub.On<string>("ReceiveCommand", async (command) =>
+                // Wire up command handler
+                _hub.On<string, string[]>("ReceiveCommand", async (command, args) =>
                 {
-                    logger.LogDebug("Received command: {CommandName}", command);
+                    logger.LogDebug("Received command: {CommandName} {Args}", command, string.Join(", ", args));
 
-                    // note: could be optimized to run in parallel
                     foreach (var handler in _commandHandlers)
                     {
                         try
                         {
-                            await handler(command, serviceProvider);
+                            await handler(command, args, serviceProvider);
                         }
                         catch (Exception ex)
                         {
@@ -52,15 +70,81 @@ namespace CommunityToolkit.Aspire.ProjectCommander
                     }
                 });
 
-                await hub.StartAsync(stoppingToken);
+                // Wire up startup form handler - now includes resource name for filtering
+                _hub.On<string, Dictionary<string, string?>>("ReceiveStartupForm", async (resourceName, formData) =>
+                {
+                    // Only process if this message is for this project (or broadcast)
+                    if (resourceName != _baseResourceName && !string.IsNullOrEmpty(resourceName))
+                    {
+                        logger.LogDebug("Ignoring startup form for different resource: {ResourceName}", resourceName);
+                        return;
+                    }
+
+                    logger.LogInformation("Received startup form data with {Count} fields", formData.Count);
+
+                    bool success = true;
+                    string? errorMessage = null;
+
+                    // Invoke all registered handlers
+                    foreach (var handler in _startupFormHandlers)
+                    {
+                        try
+                        {
+                            var handlerResult = await handler(formData, serviceProvider);
+                            if (!handlerResult)
+                            {
+                                success = false;
+                                break;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "Error processing startup form");
+                            success = false;
+                            errorMessage = ex.Message;
+                            break;
+                        }
+                    }
+
+                    // Notify the hub of completion
+                    try
+                    {
+                        await _hub.InvokeAsync("StartupFormCompleted", _aspireResourceName, success, errorMessage, stoppingToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Error notifying hub of startup form completion");
+                    }
+
+                    if (success)
+                    {
+                        startupFormService.CompleteStartupForm(formData);
+                        logger.LogInformation("Startup form completed successfully");
+                    }
+                    else
+                    {
+                        logger.LogWarning("Startup form validation failed: {Error}", errorMessage);
+                    }
+                });
+
+                // Wire up startup form required notification (from hub)
+                _hub.On<string>("StartupFormRequired", (title) =>
+                {
+                    logger.LogInformation("Startup form required: {Title}", title);
+                    startupFormService.SetStartupFormRequired(true);
+                });
+
+                await _hub.StartAsync(stoppingToken);
 
                 logger.LogInformation("Connected to Aspire Project Commands Hub: Registering identity...");
 
                 // Grab my suffix from OTEL env vars so the AppHost signalr hub can correctly isolate this client (i.e. there may be replicas)
-                var aspireResourceName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME")!;
+                var aspireServiceName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME")!;
                 var aspireResourceSuffix = Environment.GetEnvironmentVariable("OTEL_RESOURCE_ATTRIBUTES")!.Split("=")[1];
-                
-                await hub.InvokeAsync("Identify", $"{aspireResourceName}-{aspireResourceSuffix}", stoppingToken);
+                _aspireResourceName = $"{aspireServiceName}-{aspireResourceSuffix}";
+                _baseResourceName = aspireServiceName;
+
+                await _hub.InvokeAsync("Identify", _aspireResourceName, stoppingToken);
 
                 // block until shutdown / stop
                 await Task.Delay(Timeout.Infinite, stoppingToken);
@@ -68,10 +152,32 @@ namespace CommunityToolkit.Aspire.ProjectCommander
             }, stoppingToken);
         }
 
-        public event Func<string, IServiceProvider, Task> CommandReceived
+        /// <inheritdoc />
+        public event Func<string, string[], IServiceProvider, Task> CommandReceived
         {
             add => _commandHandlers.Add(value);
             remove => _commandHandlers.Remove(value);
+        }
+
+        /// <inheritdoc />
+        public event Func<Dictionary<string, string?>, IServiceProvider, Task<bool>>? StartupFormReceived
+        {
+            add
+            {
+                if (value != null)
+                    _startupFormHandlers.Add(value);
+            }
+            remove
+            {
+                if (value != null)
+                    _startupFormHandlers.Remove(value);
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<Dictionary<string, string?>?> WaitForStartupFormAsync(CancellationToken cancellationToken = default)
+        {
+            return await startupFormService.WaitForStartupFormAsync(cancellationToken);
         }
     }
 }
