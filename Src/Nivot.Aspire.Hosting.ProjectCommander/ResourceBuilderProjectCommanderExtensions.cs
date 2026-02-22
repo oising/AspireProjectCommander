@@ -130,11 +130,6 @@ public static class ResourceBuilderProjectCommanderExtensions
             throw new ArgumentException("You must supply at least one command.");
         }
 
-        // Check if this project has a startup form - commands should be disabled until form is completed
-        var startupFormAnnotation = builder.Resource.Annotations
-            .OfType<StartupFormResourceAnnotation>()
-            .FirstOrDefault();
-
         // Add command proxies to the dashboard
         foreach (var command in commands)
         {
@@ -186,12 +181,17 @@ public static class ResourceBuilderProjectCommanderExtensions
             {
                 IconName = "DesktopSignal",
                 IconVariant = IconVariant.Regular,
-                // If project has a startup form, disable commands until form is completed
-                UpdateState = startupFormAnnotation != null
-                    ? _ => startupFormAnnotation.StartupFormResource.IsCompleted
-                        ? ResourceCommandState.Enabled
-                        : ResourceCommandState.Disabled
-                    : null
+                // Resolve startup form annotation dynamically so call order of WithProjectCommands
+                // and WithProjectManifest doesn't matter
+                UpdateState = _ =>
+                {
+                    var annotation = builder.Resource.Annotations
+                        .OfType<StartupFormResourceAnnotation>()
+                        .FirstOrDefault();
+                    return annotation != null && !annotation.StartupFormResource.IsCompleted
+                        ? ResourceCommandState.Disabled
+                        : ResourceCommandState.Enabled;
+                }
             });
         }
 
