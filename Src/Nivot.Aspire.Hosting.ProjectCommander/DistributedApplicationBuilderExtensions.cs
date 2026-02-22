@@ -110,31 +110,12 @@ public static class DistributedApplicationBuilderExtensions
     /// </summary>
     /// <param name="builder">The startup form resource builder.</param>
     /// <returns>The resource builder for chaining.</returns>
-    public static IResourceBuilder<StartupFormResource> WithStartupFormBehavior(
+    internal static IResourceBuilder<StartupFormResource> WithStartupFormBehavior(
         this IResourceBuilder<StartupFormResource> builder)
     {
         var formResource = builder.Resource;
         var form = formResource.Form;
         var inputs = form.Inputs.Select(ManifestReader.ToInteractionInput).ToArray();
-
-        // Subscribe to InitializeResourceEvent to participate in Aspire's lifecycle.
-        // This is required for WaitFor to work correctly with custom resources.
-        // We don't transition to Running here - we stay in WaitingForConfiguration
-        // until the user completes the form.
-        builder.ApplicationBuilder.Eventing.Subscribe<InitializeResourceEvent>(formResource, async (e, ct) =>
-        {
-            var notify = e.Services.GetRequiredService<ResourceNotificationService>();
-            var logger = e.Services.GetRequiredService<ResourceLoggerService>().GetLogger(formResource);
-
-            logger.LogInformation("Startup form '{FormTitle}' initialized - waiting for user configuration", form.Title);
-
-            // Keep the resource in WaitingForConfiguration state
-            // The state was already set via WithInitialState, but we update the timestamp
-            await notify.PublishUpdateAsync(formResource, state => state with
-            {
-                CreationTimeStamp = DateTime.Now
-            });
-        });
 
         // Register the "Configure" command on the startup form resource
         builder.WithCommand(
@@ -194,6 +175,12 @@ public static class DistributedApplicationBuilderExtensions
                     // Mark the form resource as completed
                     formResource.MarkCompleted(formData);
 
+                    // Get the logger for diagnostic output
+                    var loggerService = context.ServiceProvider.GetRequiredService<ResourceLoggerService>();
+                    var logger = loggerService.GetLogger(formResource);
+
+                    logger.LogInformation("Starting lifecycle transition for startup form '{FormName}'", formResource.Name);
+
                     // Send form data to the project via SignalR
                     var groupName = formResource.ParentProject.Name;
                     
@@ -206,14 +193,18 @@ public static class DistributedApplicationBuilderExtensions
                         formData,
                         context.CancellationToken);
 
+                    logger.LogInformation("Sent startup form data to project '{ProjectName}'", groupName);
+
                     // Get the eventing service from the runtime service provider
                     var eventing = context.ServiceProvider.GetRequiredService<IDistributedApplicationEventing>();
+                    logger.LogInformation("Resolved IDistributedApplicationEventing from ServiceProvider");
 
                     // Publish BeforeResourceStartedEvent to signal we're about to start.
                     // This is required for Aspire to properly track the resource lifecycle.
                     await eventing.PublishAsync(
                         new BeforeResourceStartedEvent(formResource, context.ServiceProvider),
                         context.CancellationToken);
+                    logger.LogInformation("Published BeforeResourceStartedEvent");
 
                     // Transition the startup form resource to Running state.
                     var notify = context.ServiceProvider.GetRequiredService<ResourceNotificationService>();
@@ -226,20 +217,16 @@ public static class DistributedApplicationBuilderExtensions
                             new("form.completedAt", DateTime.Now.ToString("O"))
                         ]
                     });
+                    logger.LogInformation("Transitioned to Running state");
 
-                    // For custom resources without a process (like StartupFormResource), we must manually
-                    // publish ResourceReadyEvent. Aspire's automatic ResourceReadyEvent publishing only
-                    // works for built-in resource types (Container, Project, Executable) that have
-                    // actual processes Aspire monitors. This is what unblocks WaitFor dependents.
-                    await eventing.PublishAsync(
-                        new ResourceReadyEvent(formResource, context.ServiceProvider),
-                        context.CancellationToken);
+                    await Task.Delay(500);
 
                     // Now transition to Finished to indicate this is a completed one-time task
                     await notify.PublishUpdateAsync(formResource, state => state with
                     {
                         State = KnownResourceStates.Finished
                     });
+                    logger.LogInformation("Transitioned to Finished state - lifecycle complete");
 
                     return new ExecuteCommandResult { Success = true };
                 }
