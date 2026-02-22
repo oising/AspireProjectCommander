@@ -219,7 +219,7 @@ public static class DistributedApplicationBuilderExtensions
                     });
                     logger.LogInformation("Transitioned to Running state");
 
-                    await Task.Delay(500);
+                    await Task.Delay(500, context.CancellationToken);
 
                     // Now transition to Finished to indicate this is a completed one-time task
                     await notify.PublishUpdateAsync(formResource, state => state with
