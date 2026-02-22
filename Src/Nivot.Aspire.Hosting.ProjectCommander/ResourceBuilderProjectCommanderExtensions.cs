@@ -180,7 +180,18 @@ public static class ResourceBuilderProjectCommanderExtensions
             new CommandOptions
             {
                 IconName = "DesktopSignal",
-                IconVariant = IconVariant.Regular
+                IconVariant = IconVariant.Regular,
+                // Resolve startup form annotation dynamically so call order of WithProjectCommands
+                // and WithProjectManifest doesn't matter
+                UpdateState = _ =>
+                {
+                    var annotation = builder.Resource.Annotations
+                        .OfType<StartupFormResourceAnnotation>()
+                        .FirstOrDefault();
+                    return annotation != null && !annotation.StartupFormResource.IsCompleted
+                        ? ResourceCommandState.Disabled
+                        : ResourceCommandState.Enabled;
+                }
             });
         }
 
