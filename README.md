@@ -10,8 +10,8 @@ Aspire Project Commander is a set of packages that lets you send simple string c
 
 |Type|Name|Status|
 |-|-|-|
-|Integration|`Nivot.Aspire.ProjectCommander`|![NuGet Version](https://img.shields.io/nuget/v/Nivot.Aspire.ProjectCommander)|
-|Hosting|`Nivot.Aspire.Hosting.ProjectCommander`|![NuGet Version](https://img.shields.io/nuget/v/Nivot.Aspire.Hosting.ProjectCommander)|
+|Integration|`Nivot.Aspire.ProjectCommander`|[![NuGet Version](https://img.shields.io/nuget/v/Nivot.Aspire.ProjectCommander)](https://nuget.org/packages/Nivot.Aspire.ProjectCommander)|
+|Hosting|`Nivot.Aspire.Hosting.ProjectCommander`|[![NuGet Version](https://img.shields.io/nuget/v/Nivot.Aspire.Hosting.ProjectCommander)](https://nuget.org/packages/Nivot.Aspire.Hosting.ProjectCommander)|
 
 ## Installation
 
