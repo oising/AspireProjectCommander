@@ -15,6 +15,10 @@ Aspire Project Commander is a set of packages that lets you send simple string c
 
 ## Installation
 
+### Compatibility
+
+As of version 3.0, this project expects Aspire 17 or later as APIs have evolved and there are breaking changes.
+
 ### AppHost Project
 
 Add the hosting package to your Aspire AppHost project:
@@ -122,7 +126,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var commander = builder.AddAspireProjectCommander();
 
-var datagenerator = builder.AddProject<Projects.DataGenerator>("datagenerator")
+var datagenerator = builder.AddDotnetProject("datagenerator", @"..\DataGenerator\DataGenerator.csproj")
     .WithReference(commander)
     .WaitFor(commander)
     .WithProjectManifest(); // Reads commands and startup form from projectcommander.json
@@ -199,7 +203,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var commander = builder.AddAspireProjectCommander();
 
-builder.AddProject<Projects.DataGenerator>("eventhub-datagenerator")
+builder.AddDotnetProject("datagenerator", @"..\DataGenerator\DataGenerator.csproj")
     // provides commander signalr hub connectionstring to integration
     .WithReference(commander)
     // array of simple tuples with the command string and a display value for the dashboard
@@ -258,7 +262,7 @@ public sealed class MyProjectCommands(IAspireProjectCommanderClient commander, I
 You can use both `WithProjectManifest()` and `WithProjectCommands()` together - the commands will be merged:
 
 ```csharp
-var datagenerator = builder.AddProject<Projects.DataGenerator>("datagenerator")
+var datagenerator = builder.AddDotnetProject("datagenerator", @"..\DataGenerator\DataGenerator.csproj")
     .WithReference(commander)
     .WaitFor(commander)
     .WithProjectManifest()                              // Commands from manifest + startup form handling
@@ -275,7 +279,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var commander = builder.AddAspireProjectCommander();
 
-builder.AddProject<Projects.MyService>("myservice")
+builder.AddDotnetProject("myservice", @"..\<path>\<project.csproj>")
     .WithReference(commander)
     .WaitFor(commander)
     .WithProjectManifest();
@@ -323,6 +327,16 @@ public sealed class CommandHandler(IAspireProjectCommanderClient commander, ILog
     }
 }
 ```
+
+## End-to-End Testing
+
+The Aspire integration tests launch the sample AppHost, including its Azure Event Hubs emulator. Docker must be running to execute them:
+
+```bash
+dotnet test --project ProjectCommander.Tests/ProjectCommander.Tests.csproj
+```
+
+The tests exercise the data-generator startup form and resource commands, then verify the resulting data-generator and consumer logs.
 
 ## Sample
 

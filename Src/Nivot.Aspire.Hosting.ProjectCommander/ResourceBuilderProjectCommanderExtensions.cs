@@ -1,6 +1,7 @@
 #pragma warning disable ASPIREINTERACTION001
 
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Dotnet;
 using CommunityToolkit.Aspire.Hosting.ProjectCommander;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,12 +27,10 @@ public static class ResourceBuilderProjectCommanderExtensions
     /// If the manifest defines a startup form, a <see cref="StartupFormResource"/> is created and automatically
     /// configured so the project waits for it to be completed before starting.
     /// </summary>
-    /// <typeparam name="T">The type of project resource.</typeparam>
     /// <param name="builder">The resource builder.</param>
     /// <returns>The resource builder for chaining.</returns>
-    public static IResourceBuilder<T> WithProjectManifest<T>(
-        this IResourceBuilder<T> builder)
-        where T : ProjectResource
+    public static IResourceBuilder<DotnetProjectResource> WithProjectManifest(
+        this IResourceBuilder<DotnetProjectResource> builder)
     {
         var projectPath = GetProjectDirectory(builder.Resource);
         var manifest = ManifestReader.ReadManifest(projectPath);
@@ -96,7 +95,7 @@ public static class ResourceBuilderProjectCommanderExtensions
     /// <summary>
     /// Gets the project directory from a ProjectResource by reading its annotations.
     /// </summary>
-    private static string GetProjectDirectory(ProjectResource resource)
+    private static string GetProjectDirectory(DotnetProjectResource resource)
     {
         // ProjectResource has IProjectMetadata annotation that contains the project path
         var metadata = resource.Annotations.OfType<IProjectMetadata>().FirstOrDefault();
@@ -116,14 +115,12 @@ public static class ResourceBuilderProjectCommanderExtensions
     /// <summary>
     /// Adds project commands to a project resource.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
     /// <param name="builder"></param>
     /// <param name="commands"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentException"></exception>
-    public static IResourceBuilder<T> WithProjectCommands<T>(
-        this IResourceBuilder<T> builder, params ProjectCommand[] commands)
-        where T : ProjectResource
+    public static IResourceBuilder<DotnetProjectResource> WithProjectCommands(
+        this IResourceBuilder<DotnetProjectResource> builder, params ProjectCommand[] commands)
     {
         if (commands.Length == 0)
         {
@@ -141,17 +138,17 @@ public static class ResourceBuilderProjectCommanderExtensions
 
                 try
                 {
-                    var model = context.ServiceProvider.GetRequiredService<DistributedApplicationModel>();
+                    var model = context.Services.GetRequiredService<DistributedApplicationModel>();
                     var hub = model.Resources.OfType<ProjectCommanderHubResource>().Single().Hub!;
 
                     if (command.Arguments.Length > 0)
                     {
-                        var interaction = context.ServiceProvider.GetRequiredService<IInteractionService>();
+                        var interaction = context.Services.GetRequiredService<IInteractionService>();
                         var result = await interaction.PromptInputsAsync($"Arguments for {command.Name}", $"Arguments {command.Name}", command.Arguments, cancellationToken : context.CancellationToken);
 
                         if (result.Canceled)
                         {
-                            return new ExecuteCommandResult() { Success = false, ErrorMessage = "User cancelled command." };
+                            return new ExecuteCommandResult() { Success = false, Message = "User cancelled command." };
                         }
 
                         var args = new string?[command.Arguments.Length];
@@ -175,7 +172,7 @@ public static class ResourceBuilderProjectCommanderExtensions
                 {
                     errorMessage = ex.Message;
                 }
-                return new ExecuteCommandResult() { Success = success, ErrorMessage = errorMessage };
+                return new ExecuteCommandResult() { Success = success, Message = errorMessage };
             },
             new CommandOptions
             {
@@ -188,7 +185,7 @@ public static class ResourceBuilderProjectCommanderExtensions
                     var annotation = builder.Resource.Annotations
                         .OfType<StartupFormResourceAnnotation>()
                         .FirstOrDefault();
-                    return annotation != null && !annotation.StartupFormResource.IsCompleted
+                    return annotation is { StartupFormResource.IsCompleted: false }
                         ? ResourceCommandState.Disabled
                         : ResourceCommandState.Enabled;
                 }

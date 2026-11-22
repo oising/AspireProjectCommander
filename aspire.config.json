@@ -1,0 +1,8 @@
+{
+  "appHost": {
+    "path": "Sample/ProjectCommander.AppHost/ProjectCommander.AppHost.csproj"
+  },
+  "sdk": {
+    "version": "17.0.0"
+  }
+}

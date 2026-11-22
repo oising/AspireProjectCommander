@@ -73,7 +73,7 @@ public class StartupFormServiceTests
         _service.SetStartupFormRequired(false);
 
         // Act
-        var result = await _service.WaitForStartupFormAsync();
+        var result = await _service.WaitForStartupFormAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(result);
@@ -91,7 +91,7 @@ public class StartupFormServiceTests
         _service.CompleteStartupForm(formData);
 
         // Act
-        var result = await _service.WaitForStartupFormAsync();
+        var result = await _service.WaitForStartupFormAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -109,8 +109,8 @@ public class StartupFormServiceTests
         };
 
         // Act
-        var waitTask = _service.WaitForStartupFormAsync();
-        
+        var waitTask = _service.WaitForStartupFormAsync(TestContext.Current.CancellationToken);
+
         // Verify the task is not completed yet
         Assert.False(waitTask.IsCompleted);
 
