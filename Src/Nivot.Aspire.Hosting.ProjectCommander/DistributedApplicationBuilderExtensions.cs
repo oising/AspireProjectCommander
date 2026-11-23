@@ -105,7 +105,7 @@ public static class DistributedApplicationBuilderExtensions
 
     /// <summary>
     /// Configures the startup form resource with the "Configure" command and lifecycle management.
-    /// Call this method after <see cref="ResourceBuilderProjectCommanderExtensions.WithProjectManifest{T}"/>
+    /// Call this method after <see cref="ResourceBuilderProjectCommanderExtensions.WithProjectManifest"/>
     /// to wire up the form's command handler and state transitions.
     /// </summary>
     /// <param name="builder">The startup form resource builder.</param>
@@ -129,13 +129,13 @@ public static class DistributedApplicationBuilderExtensions
                     return new ExecuteCommandResult
                     {
                         Success = false,
-                        ErrorMessage = "Startup form has already been submitted. Restart the resource to configure again."
+                        Message = "Startup form has already been submitted. Restart the resource to configure again."
                     };
                 }
 
                 try
                 {
-                    var model = context.ServiceProvider.GetRequiredService<DistributedApplicationModel>();
+                    var model = context.Services.GetRequiredService<DistributedApplicationModel>();
                     var hubResource = model.Resources.OfType<ProjectCommanderHubResource>().SingleOrDefault();
 
                     if (hubResource?.Hub == null)
@@ -143,11 +143,11 @@ public static class DistributedApplicationBuilderExtensions
                         return new ExecuteCommandResult
                         {
                             Success = false,
-                            ErrorMessage = "Project Commander hub is not running."
+                            Message = "Project Commander hub is not running."
                         };
                     }
 
-                    var interaction = context.ServiceProvider.GetRequiredService<IInteractionService>();
+                    var interaction = context.Services.GetRequiredService<IInteractionService>();
 
                     // Show the startup form prompt
                     var result = await interaction.PromptInputsAsync(
@@ -161,7 +161,7 @@ public static class DistributedApplicationBuilderExtensions
                         return new ExecuteCommandResult
                         {
                             Success = false,
-                            ErrorMessage = "Configuration cancelled."
+                            Message = "Configuration cancelled."
                         };
                     }
 
@@ -176,7 +176,7 @@ public static class DistributedApplicationBuilderExtensions
                     formResource.MarkCompleted(formData);
 
                     // Get the logger for diagnostic output
-                    var loggerService = context.ServiceProvider.GetRequiredService<ResourceLoggerService>();
+                    var loggerService = context.Services.GetRequiredService<ResourceLoggerService>();
                     var logger = loggerService.GetLogger(formResource);
 
                     logger.LogInformation("Starting lifecycle transition for startup form '{FormName}'", formResource.Name);
@@ -196,18 +196,18 @@ public static class DistributedApplicationBuilderExtensions
                     logger.LogInformation("Sent startup form data to project '{ProjectName}'", groupName);
 
                     // Get the eventing service from the runtime service provider
-                    var eventing = context.ServiceProvider.GetRequiredService<IDistributedApplicationEventing>();
+                    var eventing = context.Services.GetRequiredService<IDistributedApplicationEventing>();
                     logger.LogInformation("Resolved IDistributedApplicationEventing from ServiceProvider");
 
                     // Publish BeforeResourceStartedEvent to signal we're about to start.
                     // This is required for Aspire to properly track the resource lifecycle.
                     await eventing.PublishAsync(
-                        new BeforeResourceStartedEvent(formResource, context.ServiceProvider),
+                        new BeforeResourceStartedEvent(formResource, context.Services),
                         context.CancellationToken);
                     logger.LogInformation("Published BeforeResourceStartedEvent");
 
                     // Transition the startup form resource to Running state.
-                    var notify = context.ServiceProvider.GetRequiredService<ResourceNotificationService>();
+                    var notify = context.Services.GetRequiredService<ResourceNotificationService>();
                     await notify.PublishUpdateAsync(formResource, state => state with
                     {
                         State = KnownResourceStates.Running,
@@ -235,7 +235,7 @@ public static class DistributedApplicationBuilderExtensions
                     return new ExecuteCommandResult
                     {
                         Success = false,
-                        ErrorMessage = ex.Message
+                        Message = ex.Message
                     };
                 }
             },

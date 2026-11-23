@@ -16,14 +16,14 @@ var datahub = builder.AddAzureEventHubs("data")
 
 var client = datahub.AddConsumerGroup("client");
 
-var datagenerator = builder.AddProject<Projects.DataGenerator>("datagenerator")
+var datagenerator = builder.AddDotnetProject("datagenerator", @"..\DataGenerator\DataGenerator.csproj")
     .WithReference(datahub)
     .WithReference(commander)
     .WaitFor(commander)
     .WaitFor(datahub)
     .WithProjectManifest(); // Reads commands and startup form from projectcommander.json
 
-builder.AddProject<Projects.Consumer>("consumer")
+builder.AddDotnetProject("consumer", @"..\Consumer\Consumer.csproj")
     .WithReference(commander)
     .WaitFor(commander)
     .WithReference(client)
